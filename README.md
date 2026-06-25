@@ -9,6 +9,11 @@ python main.py
 
 accelerate launch main.py --model ./final_merged_model --tasks multiple-java --max_length_generation 1024 --temperature 0.2 --precision fp16 --batch_size 1 --generation_only --save_generations --save_generations_path generations_java.json
 
+# Install
+git lfs install
+git clone <repo>
+cd repo
+git lfs pull
 
 # 1. Build dataset (~3h CPU, download datasets vào D:/cache/hugging_face)
 python build_completion_dataset.py

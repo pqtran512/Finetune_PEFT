@@ -1,0 +1,25 @@
+# Environment files (KHÔNG PUSH)
+.env
+.env.*
+venv/
+.venv/
+venv_eval/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / keys (KHÔNG PUSH)
+*.pem
+*.key
+*.crt
+credentials.json
+
+# Logs (optional)
+*.log

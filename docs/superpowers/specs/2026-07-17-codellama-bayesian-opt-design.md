@@ -1,36 +1,35 @@
-# Design: Bayesian Optimization for CodeLlama-7B QLoRA (RTX 3060 12GB)
+# Design: Bayesian Optimization cho CodeLlama-7B QLoRA (RTX 3060 12GB)
 
-**Date:** 2026-07-17  
-**Status:** Ready for user review  
- 
-**Scope:** Hyperparameter search for `main/main.py` (CodeLlama-7B QLoRA), using Plan B completion dataset.
+**Ngày:** 2026-07-17  
+**Trạng thái:** Chờ người dùng review  
+**Phạm vi:** Tối ưu hyperparameter cho `main/main.py` (CodeLlama-7B QLoRA), dùng dataset completion Plan B.
 
-## Goal
+## Mục tiêu
 
-Find a better training hyperparameter set for CodeLlama-7B QLoRA on Java function-completion by minimizing validation `eval_loss` via Bayesian Optimization (Optuna TPE), runnable on a single RTX 3060 12GB / 32GB RAM machine.
+Tìm bộ hyperparameter training tốt hơn cho CodeLlama-7B QLoRA trên bài Java function-completion bằng Bayesian Optimization (Optuna TPE), tối thiểu hóa `eval_loss` trên validation, chạy được trên máy 1× RTX 3060 12GB / 32GB RAM.
 
-Final model quality is judged later on multiple benchmarks (not only HumanEval-Java). BO uses `eval_loss` as a fast, stable proxy.
+Chất lượng model cuối sẽ đánh giá sau trên nhiều benchmark (không chỉ HumanEval-Java). BO dùng `eval_loss` làm proxy nhanh và ổn định.
 
-## Non-goals
+## Ngoài phạm vi
 
-- Optimizing pass@1 / HumanEval-Java inside each BO trial
-- Changing Plan B dataset construction
-- Running bf16 full LoRA Plan B (`finetune_lora7b_planB/main_qwen.py`) on 12GB
-- Parallel multi-GPU trials
-- FlashAttention-2 as a hard requirement on Windows/3060
+- Tối ưu pass@1 / HumanEval-Java bên trong mỗi trial BO
+- Thay đổi cách build dataset Plan B
+- Chạy bf16 full LoRA Plan B (`finetune_lora7b_planB/main_qwen.py`) trên 12GB
+- Chạy song song nhiều GPU
+- Bắt buộc FlashAttention-2 trên Windows/3060
 
-## Constraints
+## Ràng buộc
 
-| Item | Value |
-|------|--------|
+| Mục | Giá trị |
+|-----|---------|
 | Model | `codellama/CodeLlama-7b-hf` |
-| Quantization | QLoRA 4-bit nf4, bf16 compute |
+| Quantization | QLoRA 4-bit nf4, compute bf16 |
 | GPU | 1× RTX 3060 12GB |
 | RAM | 32GB |
 | Data | `finetune_lora7b_planB/data/java_completion_train.jsonl` |
-| Baseline script | `main/main.py` |
+| Script baseline | `main/main.py` |
 
-Fixed every trial (not searched):
+Cố định mọi trial (không search):
 
 - `per_device_train_batch_size=1`, `per_device_eval_batch_size=1`
 - `MAX_LENGTH=1024`
@@ -40,24 +39,24 @@ Fixed every trial (not searched):
 - LoRA `target_modules`: q/k/v/o + gate/up/down
 - `lora_alpha = 2 × lora_r`
 
-## Approach
+## Hướng tiếp cận
 
-**Optuna TPE** study with SQLite storage for resume.
+**Optuna TPE** với SQLite storage để resume khi bị gián đoạn.
 
-Alternative frameworks (Ray Tune, Hyperopt) were considered and rejected as heavier or weaker for single-GPU resume/pruning workflows.
+Đã cân nhắc Ray Tune / Hyperopt và loại bỏ vì nặng hơn hoặc kém hơn về resume/pruning trên single-GPU.
 
-## Architecture
+## Kiến trúc
 
 ```
 main/
-  main.py                 # full train; accepts optional best_params.json
-  bayes_opt.py            # Optuna study entrypoint
-  train_trial.py          # one trial: proxy train → eval_loss
-  training_common.py      # shared builders (datasets, model, TrainingArguments)
+  main.py                 # full train; nhận optional best_params.json
+  bayes_opt.py            # entrypoint Optuna study
+  train_trial.py          # một trial: proxy train → eval_loss
+  training_common.py      # builder dùng chung (datasets, model, TrainingArguments)
   configs/bo_defaults.yaml
   studies/
     codellama_bo.db       # Optuna SQLite
-    best_params.json      # written after study
+    best_params.json      # ghi sau khi study xong
 ```
 
 ```
@@ -65,17 +64,17 @@ Optuna study (SQLite)
   → suggest 6 hyperparams
   → train_trial (QLoRA, ~8% train, 1 epoch)
   → report eval_loss (minimize)
-  → OOM → prune / inf (study continues)
-  → after N trials → best_params.json
-  → main.py full train (3 epochs) with best params
+  → OOM → TrialPruned (study tiếp tục)
+  → sau N trials → best_params.json
+  → main.py full train (3 epochs) với best params
 ```
 
-Shared helpers live in `training_common.py` so trial and full train stay consistent. `train_trial.py` stays separate so each trial can fully tear down the model and free VRAM.
+Logic dùng chung nằm trong `training_common.py` để trial và full train nhất quán. `train_trial.py` tách riêng để mỗi trial teardown model và giải phóng VRAM sạch.
 
 ## Search space
 
-| Param | Type | Range | Baseline in `main.py` |
-|-------|------|-------|------------------------|
+| Param | Kiểu | Range | Baseline trong `main.py` |
+|-------|------|-------|--------------------------|
 | `learning_rate` | log-uniform | `1e-5` … `3e-4` | `1e-4` |
 | `weight_decay` | uniform | `0.0` … `0.1` | `0.01` |
 | `warmup_ratio` | uniform | `0.01` … `0.1` | `0.03` |
@@ -83,73 +82,73 @@ Shared helpers live in `training_common.py` so trial and full train stay consist
 | `lora_r` | categorical | `{8, 16, 32, 64}` | `32` |
 | `gradient_accumulation_steps` | categorical | `{8, 16, 32}` | `16` |
 
-Objective: **minimize** final `eval_loss` from `trainer.evaluate()` after the proxy train.
+Objective: **minimize** `eval_loss` từ `trainer.evaluate()` sau proxy train.
 
-## Proxy protocol (per trial)
+## Proxy protocol (mỗi trial)
 
-1. Load full JSONL once (or reuse cached tokenized split where practical).
-2. Train/val split: `train_test_split(test_size=0.02, seed=42)` — same as `main.py`.
-3. Subsample **~8%** of the train split for the trial (`seed` derived from `trial.number` for reproducibility).
-4. Keep the full validation split (or a fixed small eval subsample if wall-clock is too high; default = full val).
+1. Load JSONL (hoặc tái dùng tokenized split đã cache nếu khả thi).
+2. Train/val split: `train_test_split(test_size=0.02, seed=42)` — giống `main.py`.
+3. Subsample **~8%** train cho trial (`seed` suy từ `trial.number` để tái lập).
+4. Giữ nguyên validation split đầy đủ (mặc định); chỉ subsample eval nếu wall-clock quá cao.
 5. Train **1 epoch**, `save_strategy="no"`.
-6. Evaluate → return `eval_loss`.
-7. Delete temporary trial output dir under `./models/java-codellama-lora/bo_trial_{n}/`.
+6. Evaluate → trả về `eval_loss`.
+7. Xóa thư mục tạm `./models/java-codellama-lora/bo_trial_{n}/`.
 
-Default `n_trials`: **40** (overridable in yaml).
+`n_trials` mặc định: **40** (chỉnh được trong yaml).
 
-Sampler: Optuna TPE. Optional MedianPruner if mid-epoch eval is enabled later; initial implementation may report only end-of-trial metrics.
+Sampler: Optuna TPE. MedianPruner tùy chọn nếu sau này bật mid-epoch eval; bản đầu chỉ report metric cuối trial.
 
-## Error handling
+## Xử lý lỗi
 
-| Case | Behavior |
-|------|----------|
-| CUDA OOM | Catch, free CUDA memory, raise `optuna.TrialPruned()`; do not kill the study |
-| Other exceptions | Log traceback; mark trial failed; study remains resumable via SQLite |
-| Process interrupt | Resume with same study name / DB path |
+| Trường hợp | Hành vi |
+|------------|---------|
+| CUDA OOM | Bắt lỗi, giải phóng CUDA, raise `optuna.TrialPruned()`; không kill study |
+| Exception khác | Log traceback; mark trial failed; study vẫn resume được qua SQLite |
+| Process bị ngắt | Resume cùng study name / DB path |
 
-Every trial ends in `finally`: delete model/trainer refs, `gc.collect()`, `torch.cuda.empty_cache()`, remove trial temp dir.
+Mọi trial kết thúc trong `finally`: xóa ref model/trainer, `gc.collect()`, `torch.cuda.empty_cache()`, xóa thư mục tạm trial.
 
-## Integration with `main.py`
+## Tích hợp `main.py`
 
-1. Refactor `main.py` to call shared builders from `training_common.py`.
-2. If `main/studies/best_params.json` exists (or `--config` is passed), use those hyperparams for full training.
-3. Otherwise keep current defaults (`r=32`, `lr=1e-4`, `grad_accum=16`, …).
-4. Full train remains **3 epochs**, full dataset, checkpoints + `load_best_model_at_end` as today.
+1. Refactor `main.py` gọi builder từ `training_common.py`.
+2. Nếu có `main/studies/best_params.json` (hoặc truyền `--config`) → dùng bộ hyperparams đó cho full train.
+3. Không có best params → giữ defaults hiện tại (`r=32`, `lr=1e-4`, `grad_accum=16`, …).
+4. Full train vẫn **3 epochs**, full dataset, checkpoint + `load_best_model_at_end` như hiện tại.
 
-Usage:
+Cách chạy:
 
 ```powershell
 python main/bayes_opt.py
 python main/main.py
-# or
+# hoặc
 python main/main.py --config main/studies/best_params.json
 ```
 
-## Config file (`configs/bo_defaults.yaml`)
+## File cấu hình (`configs/bo_defaults.yaml`)
 
-Holds at least:
+Ít nhất gồm:
 
 - model id, data path, cache dir, max length
-- `proxy_train_fraction` (default `0.08`)
-- `proxy_epochs` (default `1`)
-- `n_trials` (default `40`)
-- search space bounds / categoricals
-- study DB path and study name
-- output paths for best params and trial dirs
+- `proxy_train_fraction` (mặc định `0.08`)
+- `proxy_epochs` (mặc định `1`)
+- `n_trials` (mặc định `40`)
+- biên / categorical của search space
+- đường dẫn study DB và study name
+- đường dẫn best params và thư mục trial
 
 ## Dependencies
 
-Add `optuna` (and keep existing `bitsandbytes`, `peft`, `transformers`, etc.). Document in root or `main` requirements as appropriate for this repo layout.
+Thêm `optuna` (giữ `bitsandbytes`, `peft`, `transformers`, …). Ghi vào requirements phù hợp layout repo.
 
-## Success criteria
+## Tiêu chí thành công
 
-1. `python main/bayes_opt.py` completes/resumes a study on RTX 3060 without unrecovered OOM crashes.
-2. `best_params.json` is written with the six searched keys + derived `lora_alpha`.
-3. `python main/main.py` can train with those params on the full Plan B dataset.
-4. Trial isolation: VRAM is reclaimable between trials (no progressive OOM after a few successful trials).
+1. `python main/bayes_opt.py` chạy/resume study trên RTX 3060 mà không crash không phục hồi vì OOM.
+2. Ghi được `best_params.json` với 6 key đã search + `lora_alpha` suy ra.
+3. `python main/main.py` train được full dataset Plan B với bộ params đó.
+4. Cách ly trial: VRAM thu hồi được giữa các trial (không OOM dần sau vài trial thành công).
 
-## Out of scope for first implementation
+## Ngoài phạm vi bản đầu
 
-- WandB logging per trial (optional later; full train keeps existing WandB behavior)
-- Automatic multi-benchmark evaluation after BO
-- Searching `MAX_LENGTH`, batch size, or quantization settings
+- WandB logging từng trial (có thể thêm sau; full train giữ WandB hiện có)
+- Tự động evaluate multi-benchmark sau BO
+- Search `MAX_LENGTH`, batch size, hoặc cấu hình quantization

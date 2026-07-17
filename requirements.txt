@@ -8,3 +8,6 @@ evaluate
 bitsandbytes
 safetensors
 wandb
+optuna
+pyyaml
+pytest

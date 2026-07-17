@@ -10,6 +10,9 @@ from training_common import (  # noqa: E402
     merge_hyperparams,
     load_hyperparams_from_json,
     DEFAULT_HYPERPARAMS,
+    is_oom_error,
+    resolve_data_path,
+    resolve_train_hyperparams,
 )
 
 
@@ -54,3 +57,24 @@ def test_load_hyperparams_from_json(tmp_path: Path):
     hp = load_hyperparams_from_json(p)
     assert hp["lora_alpha"] == 128
     assert hp["lora_r"] == 64
+
+
+def test_is_oom_error_detects_cuda_oom():
+    assert is_oom_error(RuntimeError("CUDA out of memory. Tried to allocate..."))
+    assert is_oom_error(RuntimeError("cuda OOM"))
+    assert not is_oom_error(RuntimeError("something else"))
+
+
+def test_resolve_data_path_relative_to_repo():
+    cfg = load_yaml_config()
+    p = resolve_data_path(cfg)
+    assert p.is_absolute()
+    assert p.as_posix().endswith("java_completion_train.jsonl")
+
+
+def test_resolve_train_hyperparams_from_explicit(tmp_path: Path):
+    p = tmp_path / "p.json"
+    p.write_text(json.dumps({"lora_r": 8, "learning_rate": 2e-5}), encoding="utf-8")
+    hp = resolve_train_hyperparams(p)
+    assert hp["lora_r"] == 8
+    assert hp["lora_alpha"] == 16

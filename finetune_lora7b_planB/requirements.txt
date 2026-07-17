@@ -1,0 +1,17 @@
+torch>=2.1
+transformers>=4.40
+peft>=0.10
+accelerate>=0.30
+datasets>=2.18
+scipy
+evaluate
+bitsandbytes>=0.43
+safetensors
+wandb
+huggingface_hub
+tqdm
+# flash-attn cài riêng:
+#   pip install flash-attn --no-build-isolation
+#
+# Script-based datasets (vd. codeparrot/github-code) bị block từ datasets>=2.17.
+# Plan B không dùng các dataset đó.

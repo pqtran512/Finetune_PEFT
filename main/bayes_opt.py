@@ -55,12 +55,33 @@ def save_best_params(path: Path, params: dict[str, Any], value: float) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def export_best_from_study(study: optuna.Study, best_path: Path) -> bool:
+    completed = [
+        t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE
+    ]
+    if not completed:
+        print("No completed trials; best_params not written.")
+        return False
+    save_best_params(best_path, study.best_params, study.best_value)
+    print(
+        f"Best trial={study.best_trial.number} "
+        f"eval_loss={study.best_value:.6f}"
+    )
+    print(f"Wrote {best_path}")
+    return True
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Bayesian opt for CodeLlama QLoRA")
     parser.add_argument(
         "--config", type=Path, default=None, help="Path to bo_defaults.yaml"
     )
     parser.add_argument("--n-trials", type=int, default=None)
+    parser.add_argument(
+        "--export-best",
+        action="store_true",
+        help="Only load study DB and write best_params.json (no new trials)",
+    )
     args = parser.parse_args()
 
     cfg = load_yaml_config(args.config)
@@ -69,6 +90,7 @@ def main() -> None:
     db_path = resolve_repo_path(cfg["study_db"])
     db_path.parent.mkdir(parents=True, exist_ok=True)
     storage = f"sqlite:///{db_path.as_posix()}"
+    best_path = resolve_repo_path(cfg["best_params_path"])
 
     study = optuna.create_study(
         study_name=cfg["study_name"],
@@ -77,6 +99,10 @@ def main() -> None:
         direction="minimize",
         sampler=optuna.samplers.TPESampler(seed=42),
     )
+
+    if args.export_best:
+        export_best_from_study(study, best_path)
+        return
 
     cache_dir = os.environ.get(
         "HF_CACHE_DIR", str(Path.home() / ".cache" / "huggingface")
@@ -97,19 +123,16 @@ def main() -> None:
         }
         return run_trial(trial.number, trial_hp, cfg, cache_dir=cache_dir)
 
-    study.optimize(objective, n_trials=n_trials)
+    def _save_best_callback(study: optuna.Study, trial: optuna.trial.FrozenTrial) -> None:
+        if trial.state == optuna.trial.TrialState.COMPLETE:
+            export_best_from_study(study, best_path)
 
-    completed = [
-        t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE
-    ]
-    if not completed:
-        print("No completed trials; best_params not written.")
-        return
-
-    best_path = resolve_repo_path(cfg["best_params_path"])
-    save_best_params(best_path, study.best_params, study.best_value)
-    print(f"Best eval_loss={study.best_value:.6f}")
-    print(f"Wrote {best_path}")
+    study.optimize(
+        objective,
+        n_trials=n_trials,
+        callbacks=[_save_best_callback],
+    )
+    export_best_from_study(study, best_path)
 
 
 if __name__ == "__main__":

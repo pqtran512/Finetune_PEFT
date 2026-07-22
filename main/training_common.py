@@ -75,6 +75,11 @@ def load_hyperparams_from_json(path: Path) -> dict[str, Any]:
     return merge_hyperparams(data)
 
 
+def get_hf_cache_dir() -> str:
+    """Chỉ dùng HF_HOME (chuẩn Hugging Face). Ví dụ trong .env: HF_HOME=D:/cache/huggingface"""
+    return os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
+
+
 def resolve_train_hyperparams(config_arg: Path | None = None) -> dict[str, Any]:
     """Priority: --config path > studies/best_params.json > defaults."""
     if config_arg is not None:

@@ -14,6 +14,7 @@ from train_trial import run_trial
 from training_common import (
     MAIN_DIR,
     REPO_ROOT,
+    get_hf_cache_dir,
     load_env,
     load_yaml_config,
     merge_hyperparams,
@@ -104,9 +105,8 @@ def main() -> None:
         export_best_from_study(study, best_path)
         return
 
-    cache_dir = os.environ.get(
-        "HF_CACHE_DIR", str(Path.home() / ".cache" / "huggingface")
-    )
+    cache_dir = get_hf_cache_dir()
+    print(f"HF_HOME / cache: {cache_dir}")
 
     def objective(trial: optuna.Trial) -> float:
         hp = suggest_hyperparams(trial, cfg["search_space"])

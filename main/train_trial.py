@@ -15,6 +15,7 @@ from training_common import (
     build_tokenizer,
     build_training_args,
     cleanup_cuda,
+    get_hf_cache_dir,
     is_oom_error,
     merge_hyperparams,
     prepare_train_eval,
@@ -32,9 +33,7 @@ def run_trial(
     cache_dir: str | None = None,
 ) -> float:
     hp = merge_hyperparams(hyperparams)
-    cache = cache_dir or os.environ.get(
-        "HF_CACHE_DIR", str(Path.home() / ".cache" / "huggingface")
-    )
+    cache = cache_dir or get_hf_cache_dir()
     trial_dir = resolve_repo_path(cfg["trial_output_root"]) / f"bo_trial_{trial_number}"
     trial_dir.mkdir(parents=True, exist_ok=True)
 

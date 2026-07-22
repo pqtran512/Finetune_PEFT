@@ -1,18 +1,39 @@
 import json
+import os
+from pathlib import Path
+
 import torch
-from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 
 
+def _load_env(path: Path) -> None:
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        k, v = k.strip(), v.strip().strip('"').strip("'")
+        if k and k not in os.environ:
+            os.environ[k] = v
+
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_load_env(Path(__file__).parent / ".env")
+_load_env(_REPO_ROOT / ".env")
+
 # CONFIG
-MODEL_PATH = "./models/java-codellama-lora/stage_2_v1"
-MERGE_MODEL = "./final_merged_model"
+MODEL_PATH = "./models/java-codellama-lora/completion_qlora_3060/checkpoint-352"
+MERGE_MODEL = "./final_merged_model_ckpt352"
 BASE_MODEL = "codellama/CodeLlama-7b-hf"
+# Chỉ dùng HF_HOME trong .env, ví dụ: HF_HOME=D:/cache/huggingface
+CACHE_DIR = os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-print("DEVICE use",DEVICE)
-PROMPT_FILE = "datasets/humaneval-java.json"
-OUTPUT_FILE = "java_predictions.jsonl"
+print("DEVICE use", DEVICE)
+print("HF_HOME / cache:", CACHE_DIR)
 
 MAX_NEW_TOKENS = 512
 TEMPERATURE = 0.2
@@ -21,15 +42,15 @@ TOP_P = 0.95
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
-# LOAD MODEL
 print("Loading tokenizer...")
-tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, cache_dir=CACHE_DIR)
 
 print("Loading base model...")
 base_model = AutoModelForCausalLM.from_pretrained(
-    BASE_MODEL, dtype=torch.float16,
-    #  device_map="auto"
-    device_map={"": 0},   # ép toàn bộ model vào GPU 0
+    BASE_MODEL,
+    dtype=torch.float16,
+    device_map={"": 0},
+    cache_dir=CACHE_DIR,
 )
 
 print("Loading LoRA...")
@@ -41,47 +62,4 @@ model = model.merge_and_unload()
 print("Saving merged model...")
 model.save_pretrained(MERGE_MODEL)
 tokenizer.save_pretrained(MERGE_MODEL)
-# model.eval()
-
-# LOAD DATASET
-# with open(PROMPT_FILE, "r") as f:
-#     problems = json.load(f)
-
-# # GENERATE
-# def generate_completion(prompt):
-#     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-
-#     with torch.no_grad():
-#         outputs = model.generate(
-#             **inputs,
-#             max_new_tokens=MAX_NEW_TOKENS,
-#             temperature=TEMPERATURE,
-#             top_p=TOP_P,
-#             do_sample=True,
-#             pad_token_id=tokenizer.eos_token_id
-#         )
-
-#     decoded = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-#     # Remove prompt from output
-#     completion = decoded[len(prompt):]
-
-#     return completion.strip()
-
-
-# print("Generating...")
-# with open(OUTPUT_FILE, "w") as out:
-#     for problem in tqdm(problems):
-#         task_id = problem["task_id"]
-#         prompt = problem["prompt"]
-
-#         completion = generate_completion(prompt)
-
-#         result = {
-#             "task_id": task_id,
-#             "completion": completion
-#         }
-
-#         out.write(json.dumps(result) + "\n")
-
-# print("Done! Saved to", OUTPUT_FILE)
+print(f"Done. Merged model saved to: {MERGE_MODEL}")

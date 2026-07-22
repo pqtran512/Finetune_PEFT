@@ -13,6 +13,7 @@ from training_common import (  # noqa: E402
     is_oom_error,
     resolve_data_path,
     resolve_train_hyperparams,
+    get_hf_cache_dir,
 )
 
 
@@ -78,3 +79,8 @@ def test_resolve_train_hyperparams_from_explicit(tmp_path: Path):
     hp = resolve_train_hyperparams(p)
     assert hp["lora_r"] == 8
     assert hp["lora_alpha"] == 16
+
+
+def test_get_hf_cache_dir_uses_hf_home(monkeypatch):
+    monkeypatch.setenv("HF_HOME", "D:/cache/huggingface")
+    assert get_hf_cache_dir() == "D:/cache/huggingface"

@@ -22,6 +22,7 @@ from training_common import (
     build_qlora_model,
     build_tokenizer,
     build_training_args,
+    get_hf_cache_dir,
     load_env,
     load_yaml_config,
     prepare_train_eval,
@@ -65,10 +66,8 @@ def main() -> None:
     MODEL_ID = cfg["model_id"]
     OUTPUT_DIR = str(resolve_repo_path(cfg["output_dir"]))
     MAX_LENGTH = int(cfg["max_length"])
-    CACHE_DIR = os.environ.get(
-        "HF_CACHE_DIR",
-        str(Path.home() / ".cache" / "huggingface"),
-    )
+    CACHE_DIR = get_hf_cache_dir()
+    print(f"HF_HOME / cache: {CACHE_DIR}")
 
     if WANDB_API_KEY:
         import wandb

@@ -1,8 +1,9 @@
-"""Fine-tune CodeLlama-7B QLoRA trên Java function-completion (prefix/target).
+"""Fine-tune CodeLlama-7B QLoRA trên Java method-body completion (prefix/target).
 
-Dataset: finetune_lora7b_planB/data/java_completion_train.jsonl
+Default data: data/jsonl/evol_java_completion_train.jsonl
+  (build: python data/build_evol_completion_dataset.py)
 Target hardware: RTX 3060 12GB — QLoRA 4-bit + bf16 compute.
-Optional: load best hyperparams from Optuna (`main/studies/best_params.json`).
+Optional: load best hyperparams from Optuna (`train/studies/best_params.json`).
 """
 from __future__ import annotations
 
@@ -79,7 +80,7 @@ def main() -> None:
     if not data_path.exists():
         raise FileNotFoundError(
             f"Không thấy {data_path}. "
-            "Chạy `python build_completion_dataset.py` trong finetune_lora7b_planB trước."
+            "Chạy `python data/build_evol_completion_dataset.py` trước."
         )
     start = time.time()
     dataset = load_dataset("json", data_files=str(data_path), split="train")

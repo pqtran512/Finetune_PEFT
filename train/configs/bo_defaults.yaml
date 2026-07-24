@@ -1,13 +1,14 @@
 model_id: codellama/CodeLlama-7b-hf
-data_path: finetune_lora7b_planB/data/java_completion_train.jsonl
-output_dir: models/java-codellama-lora/completion_qlora_3060
+# Evol + Magicoder-Evol Java → method-body completion (data/build_evol_completion_dataset.py)
+data_path: data/jsonl/evol_java_completion_train.jsonl
+output_dir: models/java-codellama-lora/evol_bo_best
 max_length: 1024
 proxy_train_fraction: 0.08
 proxy_epochs: 1
 n_trials: 40
 study_name: codellama_qlora_bo
-study_db: main/studies/codellama_bo.db
-best_params_path: main/studies/best_params.json
+study_db: train/studies/codellama_bo.db
+best_params_path: train/studies/best_params.json
 trial_output_root: models/java-codellama-lora/bo_trials
 eval_test_size: 0.02
 eval_seed: 42

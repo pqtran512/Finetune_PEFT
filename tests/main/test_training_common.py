@@ -3,7 +3,7 @@ import json
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "main"))
+sys.path.insert(0, str(ROOT / "train"))
 
 from training_common import (  # noqa: E402
     load_yaml_config,

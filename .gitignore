@@ -23,3 +23,10 @@ credentials.json
 
 # Logs (optional)
 *.log
+
+models/java-codellama-lora
+wandb/
+
+main/__pycache__/
+bigcode-evaluation-harness
+final_codellama_ckpt352

@@ -5,7 +5,7 @@ import sys
 import optuna
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "main"))
+sys.path.insert(0, str(ROOT / "train"))
 
 from bayes_opt import suggest_hyperparams, save_best_params  # noqa: E402
 from training_common import load_yaml_config  # noqa: E402

@@ -26,7 +26,12 @@ credentials.json
 
 models/java-codellama-lora
 wandb/
-
+bigcode-evaluation-harness/
 main/__pycache__/
 bigcode-evaluation-harness
 final_codellama_ckpt352
+train/__pycache__/
+model.safetensors
+evaluate/__pycache__/
+inference/__pycache__/
+merge/__pycache__/

@@ -129,8 +129,58 @@ def _find_needed_helpers(method_body, remaining_text):
         return "\n".join(available[n] for n in needed)
     return ""
 
+def _kill_process_tree(proc):
+    """Kill process and its children (needed on Windows so java does not keep running)."""
+    if proc.poll() is not None:
+        return
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    else:
+        try:
+            proc.kill()
+        except OSError:
+            pass
+    try:
+        proc.wait(timeout=5)
+    except Exception:
+        pass
+
+
+def _run_cmd(args, timeout=None):
+    """Run command without shell=True; on timeout, kill the whole process tree."""
+    proc = subprocess.Popen(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+        return subprocess.CompletedProcess(args, proc.returncode, stdout, stderr)
+    except subprocess.TimeoutExpired as exc:
+        _kill_process_tree(proc)
+        # Closing pipes avoids Windows hang in communicate() after kill.
+        for stream in (proc.stdout, proc.stderr):
+            if stream is not None:
+                try:
+                    stream.close()
+                except Exception:
+                    pass
+        try:
+            proc.wait(timeout=5)
+        except Exception:
+            pass
+        raise subprocess.TimeoutExpired(exc.cmd, exc.timeout) from None
+
+
 def evaluate(input_file="java_qwen_inference.jsonl"):
     jar_path = download_javatuples()
+    classpath = f".{os.pathsep}{jar_path}"
     
     if not os.path.exists(input_file):
         print(f"❌ Không thấy file {input_file}!")
@@ -159,9 +209,7 @@ def evaluate(input_file="java_qwen_inference.jsonl"):
                 jf.write(full_code)
 
             # 1. Biên dịch (javac) - Thêm classpath chứa JAR
-            # Lưu ý dấu ; dùng cho Windows
-            compile_cmd = f'javac -cp ".;{jar_path}" {file_name}'
-            cp = subprocess.run(compile_cmd, capture_output=True, text=True, shell=True)
+            cp = _run_cmd(["javac", "-cp", classpath, file_name])
             
             status = "FAILED"
             if cp.returncode != 0:
@@ -171,8 +219,10 @@ def evaluate(input_file="java_qwen_inference.jsonl"):
             else:
                 # 2. Chạy test (java) - Thêm classpath và -ea
                 try:
-                    run_cmd = f'java -ea -cp ".;{jar_path}" Problem'
-                    rp = subprocess.run(run_cmd, capture_output=True, text=True, timeout=10, shell=True)
+                    rp = _run_cmd(
+                        ["java", "-ea", "-cp", classpath, "Problem"],
+                        timeout=10,
+                    )
                     if rp.returncode == 0:
                         status = "PASSED"
                         passed += 1

@@ -26,8 +26,8 @@ _load_env(Path(__file__).parent / ".env")
 _load_env(_REPO_ROOT / ".env")
 
 # 1. Cấu hình
-MODEL_PATH = "./final_merged_model_ckpt352"
-OUTPUT_FILE = "java_inference_ckpt352.jsonl"
+MODEL_PATH = "./final_merged_model_evol"
+OUTPUT_FILE = "java_inference_evol.jsonl"
 CACHE_DIR = os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
 print("HF_HOME / cache:", CACHE_DIR)
 

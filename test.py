@@ -9,6 +9,7 @@ $env:HF_CACHE_DIR="D:/Temp/.cache/huggingface"
 python main/main.py
                    # full 3 epochs với best params
 
-
+$env:HF_HOME="D:/Temp/.cache/huggingface"
 $env:HUGGINGFACE_HUB_CACHE="D:\Temp\.cache\huggingface"
-python merge/merge_model.py674
+python merge/merge_model.py
+

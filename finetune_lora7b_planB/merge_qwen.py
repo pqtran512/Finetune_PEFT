@@ -1,4 +1,4 @@
-"""Plan B — Merge LoRA adapter vào base model."""
+﻿"""Plan B — Merge LoRA adapter vào base model."""
 import os
 import torch
 from pathlib import Path
@@ -25,7 +25,7 @@ LORA_PATH = "./models/codeqwen/planB"
 MERGE_OUT = "./final_merged_qwen_model"
 BASE_MODEL = "Qwen/CodeQwen1.5-7B"
 CACHE_DIR = os.environ.get(
-    "HF_CACHE_DIR",
+    "HF_HOME",
     str(Path.home() / ".cache" / "huggingface"),
 )
 

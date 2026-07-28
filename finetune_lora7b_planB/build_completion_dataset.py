@@ -47,16 +47,13 @@ from datasets import load_dataset
 
 
 def resolve_cache_dir() -> str:
-    """HF cache: HF_CACHE_DIR > mặc định dưới user home (tránh hardcode D:/)."""
-    raw = os.environ.get("HF_CACHE_DIR") or str(
-        Path.home() / ".cache" / "huggingface" / "datasets"
-    )
+    """HF cache: chỉ dùng HF_HOME (chuẩn Hugging Face)."""
+    raw = os.environ.get("HF_HOME") or str(Path.home() / ".cache" / "huggingface")
     path = Path(raw).expanduser()
-    # Ổ không tồn tại (vd. D:/ trên máy không có D) → fallback rõ ràng
     drive = path.drive
     if drive and not Path(drive + "/").exists():
-        fallback = Path.home() / ".cache" / "huggingface" / "datasets"
-        print(f"⚠️  HF_CACHE_DIR={raw} không dùng được (ổ {drive} không tồn tại).")
+        fallback = Path.home() / ".cache" / "huggingface"
+        print(f"⚠️  HF_HOME={raw} không dùng được (ổ {drive} không tồn tại).")
         print(f"    Dùng fallback: {fallback}")
         path = fallback
     path.mkdir(parents=True, exist_ok=True)

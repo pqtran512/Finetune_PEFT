@@ -87,17 +87,25 @@ def is_real_java(text: str) -> bool:
     return bool(JAVA_TAG.search(text) or JAVA_MARKERS.search(text))
 
 
+def clean_backticks(text: str) -> str:
+    text = re.sub(r"```java\b", "", text, flags=re.IGNORECASE)
+    text = text.replace("```", "")
+    return text.strip()
+
+
 def extract_java_code(text: str) -> str | None:
     if not text:
         return None
-    m = re.search(r"```java\s*\n(.*?)```", text, re.DOTALL | re.IGNORECASE)
+    m = re.search(r"```java\s*(.*?)\s*```", text, re.DOTALL | re.IGNORECASE)
     if m:
         code = m.group(1)
         if CSHARP_SIGNALS.search(code) or NON_JAVA_SIGNALS.search(code):
             return None
-        return code
-    if JAVA_MARKERS.search(text) and not CSHARP_SIGNALS.search(text):
-        return text
+        return code.strip()
+    
+    cleaned = clean_backticks(text)
+    if JAVA_MARKERS.search(cleaned) and not CSHARP_SIGNALS.search(cleaned):
+        return cleaned
     return None
 
 
@@ -164,6 +172,35 @@ def match_method_body(java_src: str, brace_open: int) -> tuple[str, int] | None:
     return body, i
 
 
+METHOD_DEF_FILTER_RE = re.compile(
+    r"^\s*(?:(?:public|private|protected)\s+)?"
+    r"(?:(?:static|final|abstract|synchronized|native)\s+)*"
+    r"(?:\w[\w<>,\s\[\]\?]*?)\s+"   # return type
+    r"(\w+)\s*\(",
+    re.MULTILINE,
+)
+CALL_RE = re.compile(r"\b([a-zA-Z_]\w*)\s*\(")
+_STRIP_LINE_COMMENT = re.compile(r"//[^\n]*")
+_STRIP_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+_STRIP_STRING_LIT = re.compile(r'"(?:\\.|[^"\\\n])*"')
+
+
+def _strip_noise(src: str) -> str:
+    src = _STRIP_LINE_COMMENT.sub("", src)
+    src = _STRIP_BLOCK_COMMENT.sub("", src)
+    return _STRIP_STRING_LIT.sub('""', src)
+
+
+def calls_external_helper(java_src: str, body: str, own_name: str) -> bool:
+    """True if body calls a method defined in java_src other than own_name."""
+    defined = set(METHOD_DEF_FILTER_RE.findall(_strip_noise(java_src)))
+    defined.discard(own_name)
+    if not defined:
+        return False
+    called = set(CALL_RE.findall(_strip_noise(body)))
+    return bool(called & defined)
+
+
 def to_completion_sample(
     java_src: str,
     *,
@@ -191,6 +228,12 @@ def to_completion_sample(
     if CSHARP_SIGNALS.search(body) or NON_JAVA_SIGNALS.search(body):
         return None
 
+    # Filter helper calls
+    own_name_m = re.search(r"\b(\w+)\s*\(", sig)
+    own_name = own_name_m.group(1) if own_name_m else ""
+    if calls_external_helper(java_src, body, own_name):
+        return None
+
     inline_doc = (m.group(1) or "").strip()
     doc = javadoc_to_line_comments(inline_doc)
     if not doc and instruction:
@@ -201,11 +244,23 @@ def to_completion_sample(
     if sig_compact.endswith("{"):
         sig_compact = sig_compact[:-1].rstrip()
 
-    prefix_parts = []
+    header = (
+        "import java.util.*;\n"
+        "import java.lang.reflect.*;\n"
+        "import org.javatuples.*;\n"
+        "import java.security.*;\n"
+        "import java.math.*;\n"
+        "import java.io.*;\n"
+        "import java.util.stream.*;\n"
+        "class Problem {\n"
+    )
+    sig_line = f"    {sig_compact} {{\n"
+
+    prefix_parts = [header]
     if doc:
-        prefix_parts.append(doc)
-    prefix_parts.append(f"    {sig_compact} {{")
-    prefix = "\n".join(prefix_parts) + "\n"
+        prefix_parts.append(doc + "\n")
+    prefix_parts.append(sig_line)
+    prefix = "".join(prefix_parts)
 
     body_n = normalize_body_indent(body, target_indent=8)
     target = body_n + "\n    }\n"

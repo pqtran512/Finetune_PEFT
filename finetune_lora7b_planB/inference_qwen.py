@@ -1,4 +1,4 @@
-"""Plan B — Generate Java completions on HumanEval-Java (MultiPL-E)."""
+﻿"""Plan B — Generate Java completions on HumanEval-Java (MultiPL-E)."""
 import os
 import json
 import torch
@@ -26,7 +26,7 @@ _load_env(Path(__file__).parent / ".env")
 MODEL_PATH = "./final_merged_qwen_model"
 OUTPUT_FILE = "java_qwen_inference_planB.jsonl"
 CACHE_DIR = os.environ.get(
-    "HF_CACHE_DIR",
+    "HF_HOME",
     str(Path.home() / ".cache" / "huggingface"),
 )
 

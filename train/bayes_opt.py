@@ -99,6 +99,7 @@ def main() -> None:
         load_if_exists=True,
         direction="minimize",
         sampler=optuna.samplers.TPESampler(seed=42),
+        pruner=optuna.pruners.MedianPruner(n_warmup_steps=3),
     )
 
     if args.export_best:
@@ -121,7 +122,7 @@ def main() -> None:
                 "gradient_accumulation_steps",
             )
         }
-        return run_trial(trial.number, trial_hp, cfg, cache_dir=cache_dir)
+        return run_trial(trial, trial_hp, cfg, cache_dir=cache_dir)
 
     def _save_best_callback(study: optuna.Study, trial: optuna.trial.FrozenTrial) -> None:
         if trial.state == optuna.trial.TrialState.COMPLETE:

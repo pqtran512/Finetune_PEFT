@@ -1,4 +1,4 @@
-"""Plan B — LoRA trên base bf16 (KHÔNG QLoRA 4-bit).
+﻿"""Plan B — LoRA trên base bf16 (KHÔNG QLoRA 4-bit).
 
 Khác với baseline:
 - Base load bf16 trực tiếp (bỏ BitsAndBytesConfig 4-bit).
@@ -58,7 +58,7 @@ def main():
     DATA_PATH = str(Path(__file__).parent / "data" / "java_completion_train.jsonl")
     MAX_LENGTH = 1536
     CACHE_DIR = os.environ.get(
-        "HF_CACHE_DIR",
+        "HF_HOME",
         str(Path.home() / ".cache" / "huggingface"),
     )
 

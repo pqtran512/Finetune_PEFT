@@ -25,8 +25,8 @@ _load_env(Path(__file__).parent / ".env")
 _load_env(_REPO_ROOT / ".env")
 
 # CONFIG
-MODEL_PATH = "./models/java-codellama-lora/evol_bo_best"
-MERGE_MODEL = "./final_merged_model_evol"
+MODEL_PATH = "./models/java-codellama-lora/evol_completion_bo"
+MERGE_MODEL = "./final_models/evol_completion_bo"
 BASE_MODEL = "codellama/CodeLlama-7b-hf"
 # Chỉ dùng HF_HOME trong .env, ví dụ: HF_HOME=D:/cache/huggingface
 CACHE_DIR = os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))

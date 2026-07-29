@@ -26,10 +26,12 @@ _load_env(Path(__file__).parent / ".env")
 _load_env(_REPO_ROOT / ".env")
 
 # 1. Cấu hình
-MODEL_PATH = "./final_merged_model_evol"
-OUTPUT_FILE = "java_inference_evol.jsonl"
+MODEL_PATH = _REPO_ROOT / "final_models" / "evol_completion_bo"
+OUTPUT_FILE = _REPO_ROOT / "inference" / "jsonl" / "inference_evol_completion_bo.jsonl"
 CACHE_DIR = os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
 print("HF_HOME / cache:", CACHE_DIR)
+print("Model path:", MODEL_PATH)
+print("Output file:", OUTPUT_FILE)
 
 # 2. Load Model & Tokenizer
 print("Loading Merged Model...")
@@ -82,6 +84,7 @@ for item in tqdm(dataset, desc="Generating Java Code"):
     )
 
 # 5. Lưu ra file
+OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
     for entry in results:
         f.write(json.dumps(entry) + "\n")

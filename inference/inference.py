@@ -26,8 +26,8 @@ _load_env(Path(__file__).parent / ".env")
 _load_env(_REPO_ROOT / ".env")
 
 # 1. Cấu hình
-MODEL_PATH = _REPO_ROOT / "final_models" / "evol_completion_bo"
-OUTPUT_FILE = _REPO_ROOT / "inference" / "jsonl" / "inference_evol_completion_bo.jsonl"
+MODEL_PATH = _REPO_ROOT / "final_models" / "evol_completion_bo_v2"
+OUTPUT_FILE = _REPO_ROOT / "inference" / "jsonl" / "inference_evol_completion_bo_v2.jsonl"
 CACHE_DIR = os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
 print("HF_HOME / cache:", CACHE_DIR)
 print("Model path:", MODEL_PATH)

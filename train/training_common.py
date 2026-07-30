@@ -80,10 +80,12 @@ def get_hf_cache_dir() -> str:
     return os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
 
 
-def resolve_train_hyperparams(config_arg: Path | None = None) -> dict[str, Any]:
-    """Priority: --config path > studies/best_params.json > defaults."""
+def resolve_train_hyperparams(config_arg: Path | None = None, default_path: Path | None = None) -> dict[str, Any]:
+    """Priority: --config path > default_path > studies/best_params.json > defaults."""
     if config_arg is not None:
         return load_hyperparams_from_json(config_arg)
+    if default_path is not None and default_path.exists():
+        return load_hyperparams_from_json(default_path)
     default_best = MAIN_DIR / "studies" / "best_params.json"
     if default_best.exists():
         return load_hyperparams_from_json(default_best)

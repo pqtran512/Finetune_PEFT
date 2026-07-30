@@ -62,7 +62,7 @@ def main() -> None:
     args = parser.parse_args()
 
     cfg = load_yaml_config(args.bo_config)
-    hp = resolve_train_hyperparams(args.config)
+    hp = resolve_train_hyperparams(args.config, resolve_repo_path(cfg["best_params_path"]))
 
     MODEL_ID = cfg["model_id"]
     OUTPUT_DIR = str(resolve_repo_path(cfg["output_dir"]))

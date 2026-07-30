@@ -29,6 +29,7 @@ def run_command(cmd, cwd, log_file):
     
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
+    env["PYTHONUTF8"] = "1"
     
     process = subprocess.Popen(
         cmd,

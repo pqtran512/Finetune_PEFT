@@ -491,7 +491,7 @@ def main() -> None:
         for s in samples:
             f.write(json.dumps(s, ensure_ascii=False) + "\n")
 
-    print(f"\nWrote {len(samples)} → {args.out}")
+    print(f"\nWrote {len(samples)} -> {args.out}")
     if samples:
         print("\n--- sample PREFIX ---")
         print(samples[0]["prefix"][:500])

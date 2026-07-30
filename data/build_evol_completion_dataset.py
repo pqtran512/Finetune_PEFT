@@ -172,17 +172,12 @@ def match_method_body(java_src: str, brace_open: int) -> tuple[str, int] | None:
     return body, i
 
 
-METHOD_DEF_FILTER_RE = re.compile(
-    r"^\s*(?:(?:public|private|protected)\s+)?"
-    r"(?:(?:static|final|abstract|synchronized|native)\s+)*"
-    r"(?:\w[\w<>,\s\[\]\?]*?)\s+"   # return type
-    r"(\w+)\s*\(",
-    re.MULTILINE,
-)
 CALL_RE = re.compile(r"\b([a-zA-Z_]\w*)\s*\(")
 _STRIP_LINE_COMMENT = re.compile(r"//[^\n]*")
 _STRIP_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 _STRIP_STRING_LIT = re.compile(r'"(?:\\.|[^"\\\n])*"')
+SKIP_NAMES = {"main", "if", "for", "while", "switch", "catch", "try", "new",
+              "return", "class", "else", "do", "synchronized"}
 
 
 def _strip_noise(src: str) -> str:
@@ -191,14 +186,71 @@ def _strip_noise(src: str) -> str:
     return _STRIP_STRING_LIT.sub('""', src)
 
 
-def calls_external_helper(java_src: str, body: str, own_name: str) -> bool:
-    """True if body calls a method defined in java_src other than own_name."""
-    defined = set(METHOD_DEF_FILTER_RE.findall(_strip_noise(java_src)))
-    defined.discard(own_name)
-    if not defined:
-        return False
-    called = set(CALL_RE.findall(_strip_noise(body)))
-    return bool(called & defined)
+def extract_all_methods_in_src(java_src: str, exclude_name: str) -> dict[str, str]:
+    """Find all method definitions in src, return {name: full_code_str}."""
+    sig_re = re.compile(
+        r"^[ \t]*(?:(?:public|private|protected)\s+)*"
+        r"(?:(?:static|final|abstract|synchronized|native)\s+)*"
+        r"(?:\w[\w<>,\s\[\]\?]*?)\s+"
+        r"(\w+)\s*\(",
+        re.MULTILINE,
+    )
+    methods = {}
+    for m in sig_re.finditer(java_src):
+        name = m.group(1)
+        if name in SKIP_NAMES or name == exclude_name:
+            continue
+        rest = java_src[m.end():]
+        brace_idx = rest.find("{")
+        if brace_idx == -1 or brace_idx > 200:
+            continue
+        abs_brace = m.end() + brace_idx
+        line_start = java_src.rfind("\n", 0, m.start())
+        line_start = 0 if line_start == -1 else line_start + 1
+        depth, end = 0, None
+        for j in range(abs_brace, len(java_src)):
+            if java_src[j] == "{":
+                depth += 1
+            elif java_src[j] == "}":
+                depth -= 1
+                if depth == 0:
+                    end = j + 1
+                    break
+        if end and name not in methods:
+            methods[name] = java_src[line_start:end]
+    return methods
+
+
+def collect_needed_helpers(java_src: str, body: str, own_name: str) -> list[str]:
+    """Return list of helper method codes (transitively reachable from body),
+    each re-indented to 4-space base (method-level inside class)."""
+    methods = extract_all_methods_in_src(java_src, exclude_name=own_name)
+    if not methods:
+        return []
+    needed_names = []
+    visited = set()
+    queue = list(set(CALL_RE.findall(_strip_noise(body))) & set(methods.keys()))
+    while queue:
+        name = queue.pop()
+        if name in visited:
+            continue
+        visited.add(name)
+        needed_names.append(name)
+        sub_calls = set(CALL_RE.findall(_strip_noise(methods[name])))
+        queue.extend((sub_calls & set(methods.keys())) - visited)
+    out = []
+    for n in needed_names:
+        code = methods[n]
+        lines = code.expandtabs(4).split("\n")
+        non_empty = [l for l in lines if l.strip()]
+        if not non_empty:
+            continue
+        min_ind = min(len(l) - len(l.lstrip(" ")) for l in non_empty)
+        re_indented = "\n".join(
+            ("    " + l[min_ind:]) if l.strip() else "" for l in lines
+        )
+        out.append(re_indented)
+    return out
 
 
 def to_completion_sample(
@@ -228,11 +280,9 @@ def to_completion_sample(
     if CSHARP_SIGNALS.search(body) or NON_JAVA_SIGNALS.search(body):
         return None
 
-    # Filter helper calls
     own_name_m = re.search(r"\b(\w+)\s*\(", sig)
     own_name = own_name_m.group(1) if own_name_m else ""
-    if calls_external_helper(java_src, body, own_name):
-        return None
+    helpers = collect_needed_helpers(java_src, body, own_name)
 
     inline_doc = (m.group(1) or "").strip()
     doc = javadoc_to_line_comments(inline_doc)
@@ -264,6 +314,8 @@ def to_completion_sample(
 
     body_n = normalize_body_indent(body, target_indent=8)
     target = body_n + "\n    }\n"
+    if helpers:
+        target += "\n" + "\n\n".join(helpers) + "\n"
     return {"prefix": prefix, "target": target}
 
 

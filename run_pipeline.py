@@ -113,6 +113,21 @@ def main():
         help="Skip the evaluation step."
     )
     parser.add_argument(
+        "--skip-bo",
+        action="store_true",
+        help="Skip the Bayesian Optimization export/run step."
+    )
+    parser.add_argument(
+        "--run-bo",
+        action="store_true",
+        help="Run full Bayesian Optimization search trials instead of only exporting the best parameters."
+    )
+    parser.add_argument(
+        "--n-trials",
+        type=int,
+        help="Number of trials for Bayesian Optimization search (if --run-bo is enabled)."
+    )
+    parser.add_argument(
         "--smoke-test",
         action="store_true",
         help="Run a short training run (0.01 epochs) to verify everything works."
@@ -156,15 +171,17 @@ def main():
             # Fallback to root data folder script
             build_script = Path(__file__).parent.resolve() / "data" / "build_completion_dataset.py"
             
-    # 2. Train Script Resolution
+    # 2. Train and BO Script Resolution
     if is_root_structure:
         train_script = plan_dir / "train" / "main.py"
         if not train_script.exists():
             train_script = plan_dir / "train" / "main_qwen.py"
+        bo_script = plan_dir / "train" / "bayes_opt.py"
     else:
         train_script = plan_dir / "main_qwen.py"
         if not train_script.exists():
             train_script = plan_dir / "main.py"
+        bo_script = plan_dir / "bayes_opt.py"
             
     # 3. Merge Script Resolution
     if is_root_structure:
@@ -209,6 +226,28 @@ def main():
             "reason": "Skipped by user" if args.skip_build else "Script not found"
         })
         
+    # Add step 1.5: BO Export/Run
+    if not args.skip_bo and bo_script.exists():
+        bo_cmd = [sys.executable, bo_script]
+        if args.run_bo:
+            if args.n_trials is not None:
+                bo_cmd.extend(["--n-trials", str(args.n_trials)])
+        else:
+            bo_cmd.append("--export-best")
+            
+        steps.append({
+            "name": "BO Run" if args.run_bo else "BO Export",
+            "cmd": bo_cmd,
+            "cwd": plan_dir,
+            "skip": False
+        })
+    else:
+        steps.append({
+            "name": "BO Export/Run",
+            "skip": True,
+            "reason": "Skipped by user" if args.skip_bo else "Script not found"
+        })
+
     # Add step 2: Train Model
     if not args.skip_train and train_script.exists():
         epochs_override = None

@@ -80,7 +80,7 @@ def run_trial(
         # Process train proxy slice
         proxy_fraction = float(cfg["proxy_train_fraction"])
         n_train = max(1, int(len(raw_train) * proxy_fraction))
-        raw_train_proxy = raw_train.shuffle(seed=trial_number).select(range(n_train))
+        raw_train_proxy = raw_train.shuffle(seed=42).select(range(n_train))
 
         # Tokenize datasets
         tokenize_with_mask = _tokenize_fn(tokenizer, int(cfg["max_length"]))

@@ -6,17 +6,17 @@ from pathlib import Path
 from typing import Any
 
 import optuna
-import torch
 from datasets import load_dataset
 from transformers import DataCollatorForSeq2Seq, Trainer, TrainerCallback
 
 from training_common import (
+    REPO_ROOT,
     build_qlora_model,
     build_tokenizer,
     build_training_args,
     cleanup_cuda,
     get_hf_cache_dir,
-    is_oom_error,
+    is_cuda_error,
     merge_hyperparams,
     prepare_train_eval,
     remove_path_quiet,
@@ -134,12 +134,10 @@ def run_trial(
         metrics = trainer.evaluate()
         return float(metrics["eval_loss"])
     except Exception as exc:
-        if is_oom_error(exc):
+        if is_cuda_error(exc):
             cleanup_cuda(trainer, model)
-            raise optuna.TrialPruned(f"OOM trial={trial_number}: {exc}") from exc
+            raise optuna.TrialPruned(f"CUDA trial={trial_number}: {exc}") from exc
         raise
     finally:
         cleanup_cuda(trainer, model)
         remove_path_quiet(trial_dir)
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()

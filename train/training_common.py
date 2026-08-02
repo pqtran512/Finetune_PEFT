@@ -107,12 +107,28 @@ def is_oom_error(exc: BaseException) -> bool:
     return "out of memory" in msg or "cuda oom" in msg
 
 
+def is_cuda_error(exc: BaseException) -> bool:
+    """Recoverable GPU failures (OOM, driver reset, async kernel errors)."""
+    if is_oom_error(exc):
+        return True
+    msg = str(exc).lower()
+    return "cuda error" in msg or "cublas" in msg or "cudnn" in msg
+
+
 def cleanup_cuda(*objects: Any) -> None:
     for obj in objects:
         del obj
     gc.collect()
-    if torch.cuda.is_available():
+    if not torch.cuda.is_available():
+        return
+    try:
+        torch.cuda.synchronize()
+    except RuntimeError:
+        pass
+    try:
         torch.cuda.empty_cache()
+    except RuntimeError:
+        pass
 
 
 def build_tokenizer(model_id: str, cache_dir: str):

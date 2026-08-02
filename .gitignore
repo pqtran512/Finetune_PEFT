@@ -35,3 +35,5 @@ model.safetensors
 evaluate/__pycache__/
 inference/__pycache__/
 merge/__pycache__/
+**/__pycache__/
+test.py

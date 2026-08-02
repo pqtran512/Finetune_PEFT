@@ -1,0 +1,10 @@
+{
+  "learning_rate": 0.00027081608642499667,
+  "weight_decay": 0.08324426408004218,
+  "warmup_ratio": 0.029110519961044856,
+  "lora_dropout": 0.018182496720710064,
+  "lora_r": 32,
+  "lora_alpha": 64,
+  "gradient_accumulation_steps": 16,
+  "best_eval_loss": 0.5803890228271484
+}

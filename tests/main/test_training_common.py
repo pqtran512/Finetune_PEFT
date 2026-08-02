@@ -11,6 +11,7 @@ from training_common import (  # noqa: E402
     load_hyperparams_from_json,
     DEFAULT_HYPERPARAMS,
     is_oom_error,
+    is_cuda_error,
     resolve_data_path,
     resolve_train_hyperparams,
     get_hf_cache_dir,
@@ -64,6 +65,12 @@ def test_is_oom_error_detects_cuda_oom():
     assert is_oom_error(RuntimeError("CUDA out of memory. Tried to allocate..."))
     assert is_oom_error(RuntimeError("cuda OOM"))
     assert not is_oom_error(RuntimeError("something else"))
+
+
+def test_is_cuda_error_detects_generic_cuda_failures():
+    assert is_cuda_error(RuntimeError("CUDA error: unknown error"))
+    assert is_cuda_error(RuntimeError("CUDA out of memory. Tried to allocate..."))
+    assert not is_cuda_error(RuntimeError("file not found"))
 
 
 def test_resolve_data_path_relative_to_repo():

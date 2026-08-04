@@ -37,3 +37,16 @@ inference/__pycache__/
 merge/__pycache__/
 **/__pycache__/
 test.py
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+/peft-codellama

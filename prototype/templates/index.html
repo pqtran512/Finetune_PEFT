@@ -222,7 +222,7 @@
                         </div>
                     </div>
 
-                    <div class="card-body no-padding relative overflow-hidden">
+                    <div class="card-body no-padding relative overflow-hidden flex-col">
                         <!-- Loading Overlay -->
                         <div id="loading-overlay" class="overlay hidden">
                             <div class="loader-content">
@@ -232,24 +232,61 @@
                             </div>
                         </div>
 
-                        <!-- Empty State -->
-                        <div id="empty-state" class="empty-state">
-                            <div class="empty-icon-wrapper">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48"
-                                    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                                    stroke-linejoin="round">
-                                    <polyline points="16 18 22 12 16 6"></polyline>
-                                    <polyline points="8 6 2 12 8 18"></polyline>
-                                </svg>
+                        <!-- Editor Pane (Chứa Code Editor) -->
+                        <div class="editor-pane">
+                            <!-- Empty State -->
+                            <div id="empty-state" class="empty-state">
+                                <div class="empty-icon-wrapper">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48"
+                                        fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="16 18 22 12 16 6"></polyline>
+                                        <polyline points="8 6 2 12 8 18"></polyline>
+                                    </svg>
+                                </div>
+                                <p>Kết quả code Java hoàn thiện sẽ hiển thị tại đây</p>
+                                <span class="subtext">Chọn hoặc nhập yêu cầu ở cột bên trái và bấm nút "Bắt đầu sinh mã
+                                    Java".</span>
                             </div>
-                            <p>Kết quả code Java hoàn thiện sẽ hiển thị tại đây</p>
-                            <span class="subtext">Chọn hoặc nhập yêu cầu ở cột bên trái và bấm nút "Bắt đầu sinh mã
-                                Java".</span>
+
+                            <!-- Code Content -->
+                            <pre id="code-container"
+                                class="hidden"><code class="language-java" id="code-output"></code></pre>
                         </div>
 
-                        <!-- Code Content -->
-                        <pre id="code-container"
-                            class="hidden"><code class="language-java" id="code-output"></code></pre>
+                        <!-- Test Runner / Playground Section -->
+                        <div class="test-runner-pane hidden" id="test-runner-section">
+                            <div class="runner-header">
+                                <div class="runner-title">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                    </svg>
+                                    <span>Chạy thử nghiệm mã (Playground)</span>
+                                </div>
+                                <div class="runner-actions">
+                                    <button id="btn-run-code" class="btn-run">
+                                        <span class="run-btn-text">Chạy hàm</span>
+                                        <span class="run-spinner hidden"></span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="runner-body">
+                                <div class="runner-input-group">
+                                    <div class="input-header">
+                                        <label for="test-input-args">Đối số đầu vào (Arguments):</label>
+                                        <span class="helper-badge" id="test-input-helper">Ví dụ: (1, 2)</span>
+                                    </div>
+                                    <input type="text" id="test-input-args" placeholder="Nhập các đối số truyền vào hàm, ví dụ: 1, 2 hoặc (1, 2)">
+                                </div>
+                                <div class="runner-output-group">
+                                    <label>Kết quả thực thi (Console Output):</label>
+                                    <div class="console-box" id="console-output">
+                                        <span class="console-placeholder">Nhập đối số đầu vào ở trên và nhấn "Chạy hàm" để xem kết quả tính toán.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>

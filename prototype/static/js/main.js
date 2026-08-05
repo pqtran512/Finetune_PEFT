@@ -51,6 +51,29 @@ const LOADING_MESSAGES = [
     "Đang kiểm tra và hoàn tất khối mã..."
 ];
 
+const PRESET_HELPERS = {
+    rolling_max: {
+        placeholder: "Ví dụ: List.of(1, 2, 4, 3, 5)",
+        helper: "Ví dụ: (List.of(1, 2, 4, 3, 5))",
+        default: "(List.of(1, 2, 4, 3, 5))"
+    },
+    remove_duplicates: {
+        placeholder: "Ví dụ: List.of(1, 2, 3, 2, 4)",
+        helper: "Ví dụ: (List.of(1, 2, 3, 2, 4))",
+        default: "(List.of(1, 2, 3, 2, 4))"
+    },
+    sort_even: {
+        placeholder: "Ví dụ: List.of(5, 6, 3, 4, 1, 2)",
+        helper: "Ví dụ: (List.of(5, 6, 3, 4, 1, 2))",
+        default: "(List.of(5, 6, 3, 4, 1, 2))"
+    },
+    will_it_fly: {
+        placeholder: "Ví dụ: List.of(3, 2, 3), 10",
+        helper: "Ví dụ: (List.of(3, 2, 3), 10)",
+        default: "(List.of(3, 2, 3), 10)"
+    }
+};
+
 document.addEventListener("DOMContentLoaded", () => {
     // Elements
     const badgeDot = document.getElementById("badge-dot");
@@ -86,6 +109,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const tabMethod = document.getElementById("tab-method");
     const tabFull = document.getElementById("tab-full");
 
+    // Test runner elements
+    const testRunnerSection = document.getElementById("test-runner-section");
+    const btnRunCode = document.getElementById("btn-run-code");
+    const testInputArgs = document.getElementById("test-input-args");
+    const testInputHelper = document.getElementById("test-input-helper");
+    const consoleOutput = document.getElementById("console-output");
+    const runSpinner = document.querySelector(".run-spinner");
+    const runBtnText = document.querySelector(".run-btn-text");
+
     // State
     let currentFullCode = "";
     let currentMethodCode = "";
@@ -110,6 +142,10 @@ document.addEventListener("DOMContentLoaded", () => {
         updateInputLineNumbers();
         // Bỏ active của các thẻ mẫu nếu người dùng tự sửa đổi code
         presetChips.forEach(c => c.classList.remove("active"));
+        
+        // Reset gợi ý test input về mặc định
+        testInputArgs.placeholder = "Nhập các đối số, ví dụ: 1, 2 hoặc (1, 2)";
+        testInputHelper.textContent = "Ví dụ: (1, 2)";
     });
 
     promptInput.addEventListener("scroll", () => {
@@ -139,6 +175,17 @@ document.addEventListener("DOMContentLoaded", () => {
             // Cuộn về đầu
             promptInput.scrollTop = 0;
             inputLineNumbers.scrollTop = 0;
+
+            // Cập nhật gợi ý test input và giá trị mặc định cho từng preset bài toán
+            if (val && PRESET_HELPERS[val]) {
+                testInputArgs.placeholder = PRESET_HELPERS[val].placeholder;
+                testInputHelper.textContent = PRESET_HELPERS[val].helper;
+                testInputArgs.value = PRESET_HELPERS[val].default;
+            } else {
+                testInputArgs.placeholder = "Nhập các đối số, ví dụ: 1, 2 hoặc (1, 2)";
+                testInputHelper.textContent = "Ví dụ: (1, 2)";
+                testInputArgs.value = "";
+            }
         });
     });
 
@@ -398,6 +445,12 @@ document.addEventListener("DOMContentLoaded", () => {
             statsTime.classList.remove("hidden");
             btnCopy.disabled = false;
             btnDownload.disabled = false;
+
+            // Hiển thị và kích hoạt khu vực Chạy thử nghiệm (Playground)
+            testRunnerSection.classList.remove("hidden");
+            btnRunCode.disabled = false;
+            testInputArgs.disabled = false;
+            consoleOutput.innerHTML = '<span class="console-placeholder">Nhập đối số đầu vào ở trên và nhấn "Chạy hàm" để xem kết quả tính toán.</span>';
         })
         .catch(err => {
             alert("Lỗi khi sinh code: " + err.message);
@@ -461,4 +514,75 @@ document.addEventListener("DOMContentLoaded", () => {
             window.URL.revokeObjectURL(url);
         }, 100);
     });
+
+    // Xử lý sự kiện chạy thử nghiệm mã Java
+    btnRunCode.addEventListener("click", () => {
+        const inputArgs = testInputArgs.value.trim();
+        
+        // Trạng thái Loading của runner
+        btnRunCode.disabled = true;
+        testInputArgs.disabled = true;
+        runSpinner.classList.remove("hidden");
+        runBtnText.textContent = "Đang chạy...";
+        consoleOutput.innerHTML = '<span class="console-placeholder">Đang tiến hành biên dịch và thực thi mã Java...</span>';
+        
+        const payload = {
+            code: currentFullCode,
+            input_args: inputArgs
+        };
+        
+        fetch("/api/run", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(data => { throw new Error(data.error || "Lỗi hệ thống không xác định"); });
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Thành công
+                consoleOutput.innerHTML = `<span class="console-success">Chạy thành công! Kết quả đầu ra:\n\n${escapeHtml(data.output)}</span>`;
+            } else {
+                // Thất bại (Lỗi biên dịch / Runtime / Timeout)
+                let errorTitle = "";
+                if (data.stage === "compile") {
+                    errorTitle = "LỖI BIÊN DỊCH (Compilation Error):";
+                } else if (data.stage === "runtime") {
+                    errorTitle = "LỖI KHI CHẠY (Runtime Exception):";
+                } else if (data.stage === "timeout") {
+                    errorTitle = "QUÁ THỜI GIAN THỰC THI (Timeout Error):";
+                } else {
+                    errorTitle = "LỖI HỆ THỐNG:";
+                }
+                
+                consoleOutput.innerHTML = `<span class="console-error">${errorTitle}\n\n${escapeHtml(data.output)}</span>`;
+            }
+        })
+        .catch(err => {
+            consoleOutput.innerHTML = `<span class="console-error">LỖI KẾT NỐI API:\n\n${escapeHtml(err.message)}</span>`;
+        })
+        .finally(() => {
+            btnRunCode.disabled = false;
+            testInputArgs.disabled = false;
+            runSpinner.classList.add("hidden");
+            runBtnText.textContent = "Chạy hàm";
+        });
+    });
+    
+    // Hàm phụ trợ để tránh lỗi XSS/HTML Injection trong console
+    function escapeHtml(text) {
+        if (!text) return "";
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
 });

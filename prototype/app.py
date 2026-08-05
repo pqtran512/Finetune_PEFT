@@ -2,6 +2,10 @@ import os
 import sys
 import time
 import argparse
+import re
+import subprocess
+import tempfile
+import shutil
 from pathlib import Path
 from flask import Flask, request, jsonify, render_template
 
@@ -304,6 +308,144 @@ def generate():
         
     except Exception as e:
         return jsonify({"error": f"Loi trong qua trinh sinh code: {str(e)}"}), 500
+        
+@app.route("/api/run", methods=["POST"])
+def run_code():
+    data = request.get_json() or {}
+    code = data.get("code", "")
+    input_args = data.get("input_args", "")
+    
+    if not code:
+        return jsonify({"error": "Mã nguồn không được để trống."}), 400
+        
+    # Tìm hàm public static đầu tiên và kiểu trả về
+    match = re.search(r'public\s+static\s+([\w<>\s,\[\]]+?)\s+(\w+)\s*\(', code)
+    if not match:
+        return jsonify({"error": "Không tìm thấy hàm 'public static' nào trong mã nguồn để thực thi."}), 400
+        
+    ret_type = match.group(1).strip()
+    method_name = match.group(2).strip()
+    
+    # Định dạng tham số đầu vào (thêm ngoặc nếu chưa có)
+    args_str = input_args.strip()
+    if not args_str.startswith('('):
+        args_str = f"({args_str})"
+        
+    # Tạo mã để chạy kiểm thử bằng cách thêm hàm main vào lớp Problem
+    code_trimmed = code.rstrip()
+    if not code_trimmed.endswith('}'):
+        return jsonify({"error": "Mã nguồn Java không hợp lệ (thiếu dấu đóng ngoặc nhọn kết thúc class)."}), 400
+        
+    code_without_last_brace = code_trimmed[:-1].rstrip()
+    
+    if ret_type == "void":
+        main_body = f"""
+    public static void main(String[] args) {{
+        try {{
+            {method_name}{args_str};
+            System.out.print("Executed successfully (void return)");
+        }} catch (Throwable t) {{
+            t.printStackTrace(System.err);
+            System.exit(1);
+        }}
+    }}
+"""
+    else:
+        main_body = f"""
+    public static void main(String[] args) {{
+        try {{
+            System.out.print({method_name}{args_str});
+        }} catch (Throwable t) {{
+            t.printStackTrace(System.err);
+            System.exit(1);
+        }}
+    }}
+"""
+    
+    modified_code = code_without_last_brace + "\n" + main_body + "\n}"
+    
+    # Tạo thư mục tạm thời trong workspace/scratch
+    scratch_dir = _REPO_ROOT / "scratch"
+    if not scratch_dir.exists():
+        scratch_dir.mkdir(exist_ok=True)
+        
+    temp_dir = tempfile.mkdtemp(dir=str(scratch_dir.resolve()))
+    try:
+        java_file = os.path.join(temp_dir, "Problem.java")
+        with open(java_file, "w", encoding="utf-8") as f:
+            f.write(modified_code)
+            
+        # Tìm thư viện javatuples-1.2.jar
+        jar_name = "javatuples-1.2.jar"
+        jar_path_root = _REPO_ROOT / jar_name
+        jar_path_eval = _REPO_ROOT / "evaluate" / jar_name
+        
+        actual_jar_path = ""
+        if jar_path_root.exists():
+            actual_jar_path = str(jar_path_root.resolve())
+        elif jar_path_eval.exists():
+            actual_jar_path = str(jar_path_eval.resolve())
+        else:
+            actual_jar_path = str(jar_path_root.resolve())
+            
+        classpath = f".{os.pathsep}{actual_jar_path}"
+        
+        # 1. Biên dịch: javac
+        compile_cmd = ["javac", "-cp", classpath, "Problem.java"]
+        compile_proc = subprocess.run(
+            compile_cmd,
+            cwd=temp_dir,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        if compile_proc.returncode != 0:
+            return jsonify({
+                "success": False,
+                "stage": "compile",
+                "output": compile_proc.stderr
+            })
+            
+        # 2. Chạy: java
+        run_cmd = ["java", "-ea", "-cp", classpath, "Problem"]
+        run_proc = subprocess.run(
+            run_cmd,
+            cwd=temp_dir,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        if run_proc.returncode != 0:
+            return jsonify({
+                "success": False,
+                "stage": "runtime",
+                "output": run_proc.stderr
+            })
+            
+        return jsonify({
+            "success": True,
+            "output": run_proc.stdout
+        })
+        
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "success": False,
+            "stage": "timeout",
+            "output": "Lỗi thực thi: Quá thời gian quy định (Timeout 10s)."
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "stage": "system",
+            "output": f"Lỗi hệ thống khi chạy thử mã: {str(e)}"
+        }), 500
+    finally:
+        try:
+            shutil.rmtree(temp_dir)
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     print("Initializing model status...")

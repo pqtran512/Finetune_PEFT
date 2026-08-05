@@ -42,8 +42,10 @@ def add_header(response):
     return response
 
 # Cấu hình đường dẫn model
-BASE_MODEL = "Qwen/CodeQwen1.5-7B"
-LORA_PATH = str((_REPO_ROOT / "models" / "java-qwen" / "stage_2_v4").resolve())
+# BASE_MODEL = "Qwen/CodeQwen1.5-7B"
+# LORA_PATH = str((_REPO_ROOT / "models" / "java-qwen" / "stage_2_v4").resolve())
+BASE_MODEL = "codellama/CodeLlama-7b-hf"
+LORA_PATH = str((_REPO_ROOT / "models" / "java-codellama-lora" / "evol_completion_bo_v2").resolve())
 CACHE_DIR = os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
 
 # Biến lưu trữ model & tokenizer
@@ -54,7 +56,7 @@ model_status = "unloaded"
 
 if MOCK_MODE:
     device = "CPU (Mock Mode)"
-    model_status = "Ready (Mock Mode)"
+    model_status = "Sẵn sàng (Mock Mode)"
     print("==================================================")
     print("   RUNNING UI PROTOTYPE IN MOCK MODE              ")
     print("   (No model weights loaded, instant startup)      ")
@@ -109,10 +111,10 @@ def init_model():
             model = base_model
             
         model.eval()
-        model_status = "Ready"
+        model_status = "Sẵn sàng"
         print("Model loaded successfully. Ready for inference.")
     except Exception as e:
-        model_status = f"Loi khi tai mo hinh: {str(e)}"
+        model_status = f"Lỗi khi tải mô hình: {str(e)}"
         print(f"Error: {e}")
 
 # Các chuỗi dừng mặc định

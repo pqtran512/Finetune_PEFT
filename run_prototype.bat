@@ -27,6 +27,15 @@ echo Dang khoi dong Web Server tren http://127.0.0.1:5000...
 echo Trinh duyet se tu dong mo trong giay lat...
 start http://127.0.0.1:5000
 
+:: Hugging Face / Torch cache (tránh ghi vào C:\)
+set HF_HOME=D:/Temp/.cache/huggingface
+set HUGGINGFACE_HUB_CACHE=D:\Temp\.cache\huggingface
+set TRANSFORMERS_CACHE=D:/Temp/.cache/huggingface
+set HF_HUB_CACHE=D:/Temp/.cache/huggingface/hub
+set TORCH_HOME=D:/Temp/.cache/torch
+set TEMP=D:\Temp
+set TMP=D:\Temp
+
 :: Chay Flask backend
 python prototype/app.py
 

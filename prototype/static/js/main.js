@@ -290,15 +290,25 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 infoDevice.textContent = data.device;
 
-                if (data.status.startsWith("Sẵn sàng") || data.status.includes("Mock")) {
+                const status = data.status || "";
+                const isReady =
+                    status.startsWith("Sẵn sàng") ||
+                    status.startsWith("Ready") ||
+                    status.includes("Mock");
+                const isError =
+                    status.includes("Lỗi") ||
+                    status.includes("Loi") ||
+                    status.toLowerCase().startsWith("error");
+
+                if (isReady) {
                     badgeDot.className = "dot online";
                     btnGenerate.disabled = false;
                     clearInterval(checkInterval);
-                } else if (data.status.includes("Lỗi")) {
+                } else if (isError) {
                     badgeDot.className = "dot offline";
                     btnGenerate.disabled = true;
                     clearInterval(checkInterval);
-                    alert("Lỗi tải mô hình: " + data.status);
+                    alert("Lỗi tải mô hình: " + status);
                 } else {
                     badgeDot.className = "dot pending";
                     btnGenerate.disabled = true;

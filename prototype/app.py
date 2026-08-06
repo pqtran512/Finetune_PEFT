@@ -329,38 +329,50 @@ def run_code():
     if not args_str.startswith('('):
         args_str = f"({args_str})"
         
-    # Tạo mã để chạy kiểm thử bằng cách thêm hàm main vào lớp Problem
-    code_trimmed = code.rstrip()
-    if not code_trimmed.endswith('}'):
-        return jsonify({"error": "Mã nguồn Java không hợp lệ (thiếu dấu đóng ngoặc nhọn kết thúc class)."}), 400
+    # Tự động cân bằng ngoặc nhọn kết thúc class Problem nếu thiếu
+    open_braces = code.count('{')
+    close_braces = code.count('}')
+    diff = open_braces - close_braces
+    code_balanced = code
+    if diff > 0:
+        code_balanced = code.rstrip() + "\n" + ("}" * diff)
         
-    code_without_last_brace = code_trimmed[:-1].rstrip()
-    
+    # Tạo mã TestRunner riêng biệt để thực thi tránh thay đổi cấu trúc Problem.java
     if ret_type == "void":
-        main_body = f"""
+        runner_code = f"""import java.util.*;
+import java.io.*;
+import java.math.*;
+import org.javatuples.*;
+
+public class TestRunner {{
     public static void main(String[] args) {{
         try {{
-            {method_name}{args_str};
+            Problem.{method_name}{args_str};
             System.out.print("Executed successfully (void return)");
         }} catch (Throwable t) {{
             t.printStackTrace(System.err);
             System.exit(1);
         }}
     }}
+}}
 """
     else:
-        main_body = f"""
+        runner_code = f"""import java.util.*;
+import java.io.*;
+import java.math.*;
+import org.javatuples.*;
+
+public class TestRunner {{
     public static void main(String[] args) {{
         try {{
-            System.out.print({method_name}{args_str});
+            System.out.print(Problem.{method_name}{args_str});
         }} catch (Throwable t) {{
             t.printStackTrace(System.err);
             System.exit(1);
         }}
     }}
+}}
 """
-    
-    modified_code = code_without_last_brace + "\n" + main_body + "\n}"
     
     # Tạo thư mục tạm thời trong workspace/scratch
     scratch_dir = _REPO_ROOT / "scratch"
@@ -369,9 +381,12 @@ def run_code():
         
     temp_dir = tempfile.mkdtemp(dir=str(scratch_dir.resolve()))
     try:
-        java_file = os.path.join(temp_dir, "Problem.java")
-        with open(java_file, "w", encoding="utf-8") as f:
-            f.write(modified_code)
+        # Ghi file Problem.java và TestRunner.java
+        with open(os.path.join(temp_dir, "Problem.java"), "w", encoding="utf-8") as f:
+            f.write(code_balanced)
+            
+        with open(os.path.join(temp_dir, "TestRunner.java"), "w", encoding="utf-8") as f:
+            f.write(runner_code)
             
         # Tìm thư viện javatuples-1.2.jar
         jar_name = "javatuples-1.2.jar"
@@ -388,8 +403,8 @@ def run_code():
             
         classpath = f".{os.pathsep}{actual_jar_path}"
         
-        # 1. Biên dịch: javac
-        compile_cmd = ["javac", "-cp", classpath, "Problem.java"]
+        # 1. Biên dịch cả 2 file: javac Problem.java TestRunner.java
+        compile_cmd = ["javac", "-cp", classpath, "Problem.java", "TestRunner.java"]
         compile_proc = subprocess.run(
             compile_cmd,
             cwd=temp_dir,
@@ -405,8 +420,8 @@ def run_code():
                 "output": compile_proc.stderr
             })
             
-        # 2. Chạy: java
-        run_cmd = ["java", "-ea", "-cp", classpath, "Problem"]
+        # 2. Chạy lớp TestRunner: java TestRunner
+        run_cmd = ["java", "-ea", "-cp", classpath, "TestRunner"]
         run_proc = subprocess.run(
             run_cmd,
             cwd=temp_dir,

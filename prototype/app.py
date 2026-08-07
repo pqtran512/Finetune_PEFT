@@ -329,15 +329,41 @@ def run_code():
     if not args_str.startswith('('):
         args_str = f"({args_str})"
         
-    # Tự động cân bằng ngoặc nhọn kết thúc class Problem nếu thiếu
-    open_braces = code.count('{')
-    close_braces = code.count('}')
-    diff = open_braces - close_braces
-    code_balanced = code
-    if diff > 0:
-        code_balanced = code.rstrip() + "\n" + ("}" * diff)
+    # Phát hiện class name hoặc tự động bọc nếu thiếu class
+    has_class = re.search(r'\b(?:class|interface|enum)\s+(\w+)', code)
+    if has_class:
+        class_name = has_class.group(1)
+        # Tự động cân bằng ngoặc nhọn kết thúc class nếu thiếu
+        open_braces = code.count('{')
+        close_braces = code.count('}')
+        diff = open_braces - close_braces
+        code_balanced = code
+        if diff > 0:
+            code_balanced = code.rstrip() + "\n" + ("}" * diff)
+    else:
+        class_name = "Problem"
+        # Tách các dòng import ra ngoài nếu có
+        lines = code.splitlines()
+        imports = []
+        body_lines = []
+        for line in lines:
+            trimmed = line.strip()
+            if trimmed.startswith("import ") or trimmed.startswith("package "):
+                imports.append(line)
+            else:
+                body_lines.append(line)
         
-    # Tạo mã TestRunner riêng biệt để thực thi tránh thay đổi cấu trúc Problem.java
+        body_code = "\n".join(body_lines)
+        
+        # Tự động bọc vào public class Problem
+        wrapped_code = "\n".join(imports) + "\n\n"
+        wrapped_code += "import java.util.*;\nimport java.io.*;\nimport java.math.*;\nimport org.javatuples.*;\n\n"
+        wrapped_code += "public class Problem {\n"
+        wrapped_code += body_code + "\n"
+        wrapped_code += "}\n"
+        code_balanced = wrapped_code
+        
+    # Tạo mã TestRunner riêng biệt để thực thi
     if ret_type == "void":
         runner_code = f"""import java.util.*;
 import java.io.*;
@@ -347,7 +373,7 @@ import org.javatuples.*;
 public class TestRunner {{
     public static void main(String[] args) {{
         try {{
-            Problem.{method_name}{args_str};
+            {class_name}.{method_name}{args_str};
             System.out.print("Executed successfully (void return)");
         }} catch (Throwable t) {{
             t.printStackTrace(System.err);
@@ -365,7 +391,7 @@ import org.javatuples.*;
 public class TestRunner {{
     public static void main(String[] args) {{
         try {{
-            System.out.print(Problem.{method_name}{args_str});
+            System.out.print({class_name}.{method_name}{args_str});
         }} catch (Throwable t) {{
             t.printStackTrace(System.err);
             System.exit(1);
@@ -381,8 +407,8 @@ public class TestRunner {{
         
     temp_dir = tempfile.mkdtemp(dir=str(scratch_dir.resolve()))
     try:
-        # Ghi file Problem.java và TestRunner.java
-        with open(os.path.join(temp_dir, "Problem.java"), "w", encoding="utf-8") as f:
+        # Ghi file <class_name>.java và TestRunner.java
+        with open(os.path.join(temp_dir, f"{class_name}.java"), "w", encoding="utf-8") as f:
             f.write(code_balanced)
             
         with open(os.path.join(temp_dir, "TestRunner.java"), "w", encoding="utf-8") as f:
@@ -403,8 +429,8 @@ public class TestRunner {{
             
         classpath = f".{os.pathsep}{actual_jar_path}"
         
-        # 1. Biên dịch cả 2 file: javac Problem.java TestRunner.java
-        compile_cmd = ["javac", "-cp", classpath, "Problem.java", "TestRunner.java"]
+        # 1. Biên dịch cả 2 file: javac <class_name>.java TestRunner.java
+        compile_cmd = ["javac", "-cp", classpath, f"{class_name}.java", "TestRunner.java"]
         compile_proc = subprocess.run(
             compile_cmd,
             cwd=temp_dir,

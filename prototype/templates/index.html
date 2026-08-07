@@ -56,13 +56,14 @@
 
                     <div class="card-body">
                         <!-- YÊU CẦU SINH MÃ (Phía trên) -->
-                        
+
                         <!-- 1. Chọn bài toán mẫu -->
                         <div class="section-group">
                             <label class="group-label">Chọn bài toán mẫu:</label>
                             <div class="preset-chips">
                                 <button type="button" class="preset-chip" data-value="rolling_max">Rolling Max</button>
-                                <button type="button" class="preset-chip" data-value="remove_duplicates">Remove Duplicates</button>
+                                <button type="button" class="preset-chip" data-value="remove_duplicates">Remove
+                                    Duplicates</button>
                                 <button type="button" class="preset-chip" data-value="sort_even">Sort Even</button>
                                 <button type="button" class="preset-chip" data-value="will_it_fly">Will It Fly</button>
                             </div>
@@ -70,7 +71,7 @@
 
                         <!-- 2. Khai báo hàm / Mô tả yêu cầu (IDE Style - Chiếm không gian co giãn) -->
                         <div class="input-group flex-grow">
-                            <label>Khai báo hàm / Mô tả yêu cầu:</label>
+                            <label>Mô tả yêu cầu:</label>
                             <div class="ide-editor-input">
                                 <div class="ide-editor-header">
                                     <div class="ide-tabs">
@@ -122,7 +123,7 @@
                             <!-- 5. Cấu hình chuyên sâu (Thông số mô hình) -->
                             <details class="advanced-settings">
                                 <summary>
-                                    <span>Cấu hình chuyên sâu (Thông số mô hình)</span>
+                                    <span>Cấu hình</span>
                                     <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none"
                                         stroke="currentColor" stroke-width="2">
                                         <polyline points="6 9 12 15 18 9"></polyline>
@@ -149,14 +150,16 @@
                                                 <label for="temperature">Nhiệt độ (Temperature):</label>
                                                 <span id="temp-val" class="slider-value">0.2</span>
                                             </div>
-                                            <input type="range" id="temperature" min="0" max="1" step="0.05" value="0.2">
+                                            <input type="range" id="temperature" min="0" max="1" step="0.05"
+                                                value="0.2">
                                         </div>
                                         <div class="slider-group">
                                             <div class="slider-header">
                                                 <label for="max-tokens">Tokens tối đa (Max Tokens):</label>
                                                 <span id="tokens-val" class="slider-value">512</span>
                                             </div>
-                                            <input type="range" id="max-tokens" min="64" max="1536" step="64" value="512">
+                                            <input type="range" id="max-tokens" min="64" max="1536" step="64"
+                                                value="512">
                                         </div>
                                     </div>
                                 </div>
@@ -262,7 +265,7 @@
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
                                     </svg>
-                                    <span>Chạy thử nghiệm mã (Playground)</span>
+                                    <span>RUN</span>
                                 </div>
                                 <div class="runner-actions">
                                     <button id="btn-run-code" class="btn-run">
@@ -274,15 +277,17 @@
                             <div class="runner-body">
                                 <div class="runner-input-group">
                                     <div class="input-header">
-                                        <label for="test-input-args">Đối số đầu vào (Arguments):</label>
+                                        <label for="test-input-args">Arguments:</label>
                                         <span class="helper-badge" id="test-input-helper">Ví dụ: (1, 2)</span>
                                     </div>
-                                    <input type="text" id="test-input-args" placeholder="Nhập các đối số truyền vào hàm, ví dụ: 1, 2 hoặc (1, 2)">
+                                    <input type="text" id="test-input-args"
+                                        placeholder="Nhập các đối số truyền vào hàm, ví dụ: 1, 2 hoặc (1, 2)">
                                 </div>
                                 <div class="runner-output-group">
-                                    <label>Kết quả thực thi (Console Output):</label>
+                                    <label>Output:</label>
                                     <div class="console-box" id="console-output">
-                                        <span class="console-placeholder">Nhập đối số đầu vào ở trên và nhấn "Chạy hàm" để xem kết quả tính toán.</span>
+                                        <span class="console-placeholder">Nhập đối số đầu vào ở trên và nhấn "Chạy hàm"
+                                            để xem kết quả tính toán.</span>
                                     </div>
                                 </div>
                             </div>

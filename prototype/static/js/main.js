@@ -105,9 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const loadingOverlay = document.getElementById("loading-overlay");
     const loadingMessage = document.getElementById("loading-message");
 
-    // Code tabs
-    const tabMethod = document.getElementById("tab-method");
-    const tabFull = document.getElementById("tab-full");
+
 
     // Test runner elements
     const testRunnerSection = document.getElementById("test-runner-section");
@@ -120,8 +118,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // State
     let currentFullCode = "";
-    let currentMethodCode = "";
-    let activeTab = "method"; // "method" hoặc "full"
     let loadingMessageInterval = null;
 
     // Cập nhật số thứ tự dòng cho Textarea
@@ -242,80 +238,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Hàm bóc tách chỉ lấy hàm xử lý bên trong Class (giúp end-user dễ sử dụng)
-    function extractMethodOnly(fullCode) {
-        let code = fullCode.trim();
-        let lines = code.split("\n");
-        let methodLines = [];
-        let insideClass = false;
-        
-        for (let i = 0; i < lines.length; i++) {
-            let line = lines[i];
-            let trimmed = line.trim();
-            
-            // Tìm điểm bắt đầu của class
-            if (!insideClass) {
-                if (trimmed.startsWith("public class ") || trimmed.startsWith("class ")) {
-                    insideClass = true;
-                    continue;
-                }
-                continue;
-            }
-            
-            // Lưu dòng code thuộc class
-            methodLines.push(line);
-        }
-        
-        let methodCode = methodLines.join("\n").trim();
-        
-        // Loại bỏ ngoặc đóng của class ở dòng cuối
-        if (methodCode.endsWith("}")) {
-            methodCode = methodCode.slice(0, -1).trim();
-        }
-        
-        // Nếu không tách được gì thì trả về code gốc làm fallback
-        if (!methodCode) {
-            return fullCode;
-        }
-        
-        // Format lùi lề (loại bỏ 4 khoảng trắng thụt lề thụ động ở mỗi dòng)
-        let finalLines = methodCode.split("\n");
-        let cleanedLines = finalLines.map(line => {
-            if (line.startsWith("    ")) {
-                return line.substring(4);
-            }
-            return line;
-        });
-        
-        return cleanedLines.join("\n").trim();
-    }
-
-    // Hàm render code theo Tab đang chọn
+    // Hàm render code
     function renderCode() {
-        if (activeTab === "method") {
-            codeOutput.textContent = currentMethodCode;
-        } else {
-            codeOutput.textContent = currentFullCode;
-        }
+        codeOutput.textContent = currentFullCode;
         Prism.highlightElement(codeOutput);
     }
-
-    // Xử lý sự kiện click Tab kết quả đầu ra
-    tabMethod.addEventListener("click", () => {
-        if (activeTab === "method") return;
-        activeTab = "method";
-        tabMethod.classList.add("active");
-        tabFull.classList.remove("active");
-        renderCode();
-    });
-
-    tabFull.addEventListener("click", () => {
-        if (activeTab === "full") return;
-        activeTab = "full";
-        tabFull.classList.add("active");
-        tabMethod.classList.remove("active");
-        renderCode();
-    });
 
     // Hàm cập nhật trạng thái mô hình từ API
     let checkInterval = null;
@@ -433,11 +360,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 rawCode = prompt + rawCode;
             }
 
-            // Lưu trữ code cho cả hai Tab
+            // Lưu trữ code
             currentFullCode = rawCode;
-            currentMethodCode = extractMethodOnly(rawCode);
 
-            // Render theo tab mặc định
+            // Render
             renderCode();
 
             // Cập nhật stats
@@ -498,7 +424,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const codeText = codeOutput.textContent;
         if (!codeText) return;
 
-        const filename = activeTab === "method" ? "MethodOnly.java" : "Problem.java";
+        const filename = "Output.java";
         const blob = new Blob([codeText], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         

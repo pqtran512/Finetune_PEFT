@@ -53,24 +53,24 @@ const LOADING_MESSAGES = [
 
 const PRESET_HELPERS = {
     rolling_max: {
-        placeholder: "Ví dụ: List.of(1, 2, 4, 3, 5)",
-        helper: "Ví dụ: (List.of(1, 2, 4, 3, 5))",
-        default: "(List.of(1, 2, 4, 3, 5))"
+        placeholder: "Ví dụ: [1, 2, 4, 3, 5]",
+        helper: "Ví dụ: [1, 2, 4, 3, 5]",
+        default: "[1, 2, 4, 3, 5]"
     },
     remove_duplicates: {
-        placeholder: "Ví dụ: List.of(1, 2, 3, 2, 4)",
-        helper: "Ví dụ: (List.of(1, 2, 3, 2, 4))",
-        default: "(List.of(1, 2, 3, 2, 4))"
+        placeholder: "Ví dụ: [1, 2, 3, 2, 4]",
+        helper: "Ví dụ: [1, 2, 3, 2, 4]",
+        default: "[1, 2, 3, 2, 4]"
     },
     sort_even: {
-        placeholder: "Ví dụ: List.of(5, 6, 3, 4, 1, 2)",
-        helper: "Ví dụ: (List.of(5, 6, 3, 4, 1, 2))",
-        default: "(List.of(5, 6, 3, 4, 1, 2))"
+        placeholder: "Ví dụ: [5, 6, 3, 4, 1, 2]",
+        helper: "Ví dụ: [5, 6, 3, 4, 1, 2]",
+        default: "[5, 6, 3, 4, 1, 2]"
     },
     will_it_fly: {
-        placeholder: "Ví dụ: List.of(3, 2, 3), 10",
-        helper: "Ví dụ: (List.of(3, 2, 3), 10)",
-        default: "(List.of(3, 2, 3), 10)"
+        placeholder: "Ví dụ: [3, 2, 3], 10",
+        helper: "Ví dụ: [3, 2, 3], 10",
+        default: "[3, 2, 3], 10"
     }
 };
 
@@ -116,6 +116,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const runSpinner = document.querySelector(".run-spinner");
     const runBtnText = document.querySelector(".run-btn-text");
 
+    // Parameter hints elements
+    const paramHints = document.getElementById("param-hints");
+    const paramHintsChips = document.getElementById("param-hints-chips");
+
     // State
     let currentFullCode = "";
     let loadingMessageInterval = null;
@@ -140,8 +144,10 @@ document.addEventListener("DOMContentLoaded", () => {
         presetChips.forEach(c => c.classList.remove("active"));
         
         // Reset gợi ý test input về mặc định
-        testInputArgs.placeholder = "Nhập các đối số, ví dụ: 1, 2 hoặc (1, 2)";
+        testInputArgs.placeholder = "Nhập các đối số, ví dụ: 1, 2 hoặc [1, 2, 3]";
         testInputHelper.textContent = "Ví dụ: (1, 2)";
+        paramHints.classList.add("hidden");
+        paramHintsChips.innerHTML = "";
     });
 
     promptInput.addEventListener("scroll", () => {
@@ -367,6 +373,9 @@ document.addEventListener("DOMContentLoaded", () => {
             btnRunCode.disabled = false;
             testInputArgs.disabled = false;
             consoleOutput.innerHTML = '<span class="console-placeholder">Nhập đối số đầu vào ở trên và nhấn "Chạy hàm" để xem kết quả tính toán.</span>';
+
+            // Tự động gọi API gợi ý input dựa trên signature hàm
+            fetchSuggestedInput(currentFullCode);
         })
         .catch(err => {
             alert("Lỗi khi sinh code: " + err.message);
@@ -500,5 +509,68 @@ document.addEventListener("DOMContentLoaded", () => {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    // =====================================================
+    //  GỢI Ý INPUT THÔNG MINH (SUGGEST INPUT)
+    // =====================================================
+    function fetchSuggestedInput(code) {
+        // Kiểm tra nếu đang dùng preset đã có gợi ý sẵn thì bỏ qua
+        const activePreset = document.querySelector(".preset-chip.active");
+        if (activePreset) {
+            const presetVal = activePreset.getAttribute("data-value");
+            if (presetVal && PRESET_HELPERS[presetVal]) {
+                // Vẫn gọi API để hiển thị param hints chips
+                _callSuggestAPI(code, true);
+                return;
+            }
+        }
+        
+        _callSuggestAPI(code, false);
+    }
+
+    function _callSuggestAPI(code, skipAutoFill) {
+        fetch("/api/suggest-input", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: code })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.params || data.params.length === 0) {
+                paramHints.classList.add("hidden");
+                paramHintsChips.innerHTML = "";
+                if (!skipAutoFill) {
+                    testInputArgs.placeholder = "Hàm không có tham số";
+                    testInputHelper.textContent = "Không cần đối số";
+                    testInputArgs.value = "";
+                }
+                return;
+            }
+            
+            
+            // Cập nhật helper badge với thông tin kiểu tham số
+            const paramSummary = data.params.map(p => `${p.type} ${p.name}`).join(", ");
+            testInputHelper.textContent = paramSummary;
+            
+            // Auto-fill giá trị gợi ý nếu chưa có preset hoạt động
+            if (!skipAutoFill && data.suggested_input) {
+                // Bỏ ngoặc tròn ngoài để hiện thị thân thiện hơn
+                let displayValue = data.suggested_input;
+                if (displayValue.startsWith("(") && displayValue.endsWith(")")) {
+                    displayValue = displayValue.slice(1, -1);
+                }
+                testInputArgs.value = displayValue;
+                testInputArgs.placeholder = `Ví dụ: ${displayValue}`;
+                
+                // Hiệu ứng flash nhấp nháy khi auto-fill
+                testInputArgs.classList.add("auto-filled");
+                setTimeout(() => testInputArgs.classList.remove("auto-filled"), 1000);
+            }
+        })
+        .catch(err => {
+            console.error("Lỗi khi gọi API suggest-input:", err);
+            // Không hiển thị lỗi cho user, chỉ log
+        });
     }
 });

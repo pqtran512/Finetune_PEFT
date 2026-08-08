@@ -1029,3 +1029,94 @@ code {
     animation: spin 0.8s linear infinite;
     display: inline-block;
 }
+
+/* ==================================================
+   PARAMETER HINTS (GỢI Ý KIỂU THAM SỐ)
+   ================================================== */
+.param-hints {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.param-hints-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    padding-top: 0.2rem;
+}
+
+.param-hints-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.param-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(79, 70, 229, 0.04);
+    border: 1px solid rgba(79, 70, 229, 0.15);
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.68rem;
+    font-family: var(--font-code);
+    transition: all var(--transition-speed);
+    cursor: default;
+    animation: chipFadeIn 0.3s ease-out both;
+}
+
+.param-chip:hover {
+    background: rgba(79, 70, 229, 0.08);
+    border-color: rgba(79, 70, 229, 0.3);
+    transform: translateY(-1px);
+}
+
+.param-chip .chip-type {
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+.param-chip .chip-name {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.param-chip .chip-separator {
+    color: var(--text-dark);
+    font-weight: 400;
+}
+
+@keyframes chipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Stagger animation cho từng chip */
+.param-chip:nth-child(1) { animation-delay: 0ms; }
+.param-chip:nth-child(2) { animation-delay: 60ms; }
+.param-chip:nth-child(3) { animation-delay: 120ms; }
+.param-chip:nth-child(4) { animation-delay: 180ms; }
+.param-chip:nth-child(5) { animation-delay: 240ms; }
+
+/* Suggested input auto-fill flash effect */
+@keyframes inputFlash {
+    0% { background-color: rgba(79, 70, 229, 0.12); }
+    100% { background-color: transparent; }
+}
+
+#test-input-args.auto-filled {
+    animation: inputFlash 1s ease-out;
+}

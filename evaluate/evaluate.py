@@ -53,6 +53,10 @@ def clean_java_completion(completion):
     else:
         final_code = method_body
 
+    # Convert default/package-private static methods to public static to prevent test access/reflection errors
+    pattern = r'(?<!public\s)(?<!private\s)(?<!protected\s)\bstatic\s+([\w<>, ?[\]]+)\s+(\w+)\s*\('
+    final_code = re.sub(pattern, r'public static \1 \2(', final_code)
+
     return final_code
 
 

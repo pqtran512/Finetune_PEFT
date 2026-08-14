@@ -99,11 +99,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnDownload = document.getElementById("btn-download");
     
     const statsTime = document.getElementById("stats-time");
-    const codeContainer = document.getElementById("code-container");
+    const codeContainer = document.getElementById("code-editor");
     const codeOutput = document.getElementById("code-output");
     const emptyState = document.getElementById("empty-state");
     const loadingOverlay = document.getElementById("loading-overlay");
     const loadingMessage = document.getElementById("loading-message");
+
+    // Khởi tạo Ace Editor
+    let editor = null;
+    if (window.ace) {
+        ace.config.set('basePath', 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/');
+        editor = ace.edit("code-editor");
+        editor.setTheme("ace/theme/chrome");
+        editor.session.setMode("ace/mode/java");
+        editor.setOptions({
+            fontSize: "13px",
+            fontFamily: "var(--font-code)",
+            showPrintMargin: false,
+            useSoftTabs: true,
+            tabSize: 4,
+            readOnly: false
+        });
+
+        // Cập nhật currentFullCode khi người dùng chỉnh sửa trong editor
+        editor.on("change", () => {
+            currentFullCode = editor.getValue();
+        });
+    }
 
 
 
@@ -246,8 +268,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Hàm render code
     function renderCode() {
-        codeOutput.textContent = currentFullCode;
-        Prism.highlightElement(codeOutput);
+        if (editor) {
+            editor.setValue(currentFullCode, -1);
+        } else if (codeOutput) {
+            codeOutput.textContent = currentFullCode;
+            Prism.highlightElement(codeOutput);
+        }
     }
 
     // Hàm cập nhật trạng thái mô hình từ API
@@ -389,7 +415,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Xử lý sự kiện Sao chép (Copy)
     btnCopy.addEventListener("click", () => {
-        const codeText = codeOutput.textContent;
+        const codeText = editor ? editor.getValue() : (codeOutput ? codeOutput.textContent : currentFullCode);
         if (!codeText) return;
 
         navigator.clipboard.writeText(codeText)
@@ -420,7 +446,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Xử lý sự kiện Tải về file Java
     btnDownload.addEventListener("click", () => {
-        const codeText = codeOutput.textContent;
+        const codeText = editor ? editor.getValue() : (codeOutput ? codeOutput.textContent : currentFullCode);
         if (!codeText) return;
 
         const filename = "Output.java";
@@ -452,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
         consoleOutput.innerHTML = '<span class="console-placeholder">Đang tiến hành biên dịch và thực thi mã Java...</span>';
         
         const payload = {
-            code: currentFullCode,
+            code: editor ? editor.getValue() : currentFullCode,
             input_args: inputArgs
         };
         

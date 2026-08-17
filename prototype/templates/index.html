@@ -31,12 +31,10 @@
                 </svg>
                 <div class="logo-text">
                     <h1>Java AI Code Generator</h1>
-                    <span class="logo-sub">Fine-tuned LLM Reasoning Portal</span>
                 </div>
             </div>
-            <div class="model-badge">
+            <div class="model-badge" title="Đang kết nối...">
                 <span id="badge-dot" class="dot offline"></span>
-                <span id="badge-text">Đang kết nối...</span>
             </div>
         </header>
 
@@ -61,11 +59,10 @@
                         <div class="section-group">
                             <label class="group-label">Chọn bài toán mẫu:</label>
                             <div class="preset-chips">
+                                <button type="button" class="preset-chip" data-value="nl_prime">Số nguyên tố</button>
                                 <button type="button" class="preset-chip" data-value="rolling_max">Rolling Max</button>
-                                <button type="button" class="preset-chip" data-value="remove_duplicates">Remove
-                                    Duplicates</button>
+                                <button type="button" class="preset-chip" data-value="remove_duplicates">Remove Duplicates</button>
                                 <button type="button" class="preset-chip" data-value="sort_even">Sort Even</button>
-                                <button type="button" class="preset-chip" data-value="will_it_fly">Will It Fly</button>
                             </div>
                         </div>
 
@@ -86,14 +83,14 @@
                                             <span class="modified-dot"></span>
                                         </div>
                                     </div>
-                                    <div class="editor-lang-badge">JAVA</div>
+                                    <div class="editor-lang-badge">JAVA / NL</div>
                                 </div>
                                 <div class="ide-editor-body">
                                     <div class="line-numbers" id="input-line-numbers">
                                         <span>1</span>
                                     </div>
                                     <textarea id="prompt-input"
-                                        placeholder="Nhập khai báo hàm Java hoặc bấm chọn các bài toán mẫu ở trên..."></textarea>
+                                        placeholder="Nhập mô tả yêu cầu bằng ngôn ngữ tự nhiên hoặc dán khai báo hàm Java vào đây..."></textarea>
                                 </div>
                             </div>
                         </div>
@@ -120,50 +117,7 @@
                                 </div>
                             </div>
 
-                            <!-- 5. Cấu hình chuyên sâu (Thông số mô hình) -->
-                            <details class="advanced-settings">
-                                <summary>
-                                    <span>Cấu hình</span>
-                                    <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none"
-                                        stroke="currentColor" stroke-width="2">
-                                        <polyline points="6 9 12 15 18 9"></polyline>
-                                    </svg>
-                                </summary>
-                                <div class="advanced-content">
-                                    <div class="info-group">
-                                        <div class="info-row">
-                                            <span class="label">Mô hình gốc:</span>
-                                            <span class="value" id="info-base">-</span>
-                                        </div>
-                                        <div class="info-row">
-                                            <span class="label">Adapter LoRA:</span>
-                                            <span class="value" id="info-lora">-</span>
-                                        </div>
-                                        <div class="info-row">
-                                            <span class="label">Thiết bị suy luận:</span>
-                                            <span class="value uppercase" id="info-device">-</span>
-                                        </div>
-                                    </div>
-                                    <div class="parameter-sliders">
-                                        <div class="slider-group">
-                                            <div class="slider-header">
-                                                <label for="temperature">Nhiệt độ (Temperature):</label>
-                                                <span id="temp-val" class="slider-value">0.2</span>
-                                            </div>
-                                            <input type="range" id="temperature" min="0" max="1" step="0.05"
-                                                value="0.2">
-                                        </div>
-                                        <div class="slider-group">
-                                            <div class="slider-header">
-                                                <label for="max-tokens">Tokens tối đa (Max Tokens):</label>
-                                                <span id="tokens-val" class="slider-value">512</span>
-                                            </div>
-                                            <input type="range" id="max-tokens" min="64" max="1536" step="64"
-                                                value="512">
-                                        </div>
-                                    </div>
-                                </div>
-                            </details>
+
                         </div>
 
                         <!-- Nút bắt đầu sinh mã -->
@@ -218,12 +172,24 @@
                     </div>
 
                     <div class="card-body no-padding relative overflow-hidden flex-col">
-                        <!-- Loading Overlay -->
+                        <!-- Loading Overlay (IDE Style Console Loader) -->
                         <div id="loading-overlay" class="overlay hidden">
-                            <div class="loader-content">
-                                <div class="spinner-large"></div>
-                                <p id="loading-message">AI đang viết code Java...</p>
-                                <span class="subtext">Mô hình đã fine-tune đang thực hiện suy luận xử lý</span>
+                            <div class="ide-console-loader">
+                                <div class="console-header">
+                                    <div class="console-buttons">
+                                        <span class="c-btn red"></span>
+                                        <span class="c-btn yellow"></span>
+                                        <span class="c-btn green"></span>
+                                    </div>
+                                    <span class="console-title">Java AI Compiler - Inference Log</span>
+                                </div>
+                                <div class="console-log-body" id="console-log-body">
+                                </div>
+                                <div class="console-footer-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -294,6 +260,62 @@
         </main>
     </div>
 
+    <!-- Modal Preview Bản Code Hoàn Chỉnh Trước Khi Tải Xuống -->
+    <div id="preview-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>Xem trước</h3>
+                    </div>
+                </div>
+                <div class="modal-header-actions">
+                    <button id="btn-close-modal" class="modal-close-btn" title="Đóng (Esc)">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <div class="preview-editor-container">
+                    <div id="preview-code-editor"></div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="modal-footer-left"></div>
+                <div class="modal-footer-right">
+                    <button id="btn-modal-copy" class="btn-secondary">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span>Sao chép mã</span>
+                    </button>
+                    <button id="btn-modal-download" class="btn-primary-small">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>Tải xuống file .java</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Prism.js core & Java support -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>

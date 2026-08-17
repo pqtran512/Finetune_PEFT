@@ -898,12 +898,23 @@ def build_full_test_code(code: str, input_args: str = "") -> dict:
     in_imports = True
     for line in lines:
         trimmed = line.strip()
-        if in_imports and (trimmed.startswith("import ") or trimmed.startswith("package ")):
-            if trimmed:
-                existing_imports.append(trimmed)
-        else:
-            if trimmed:
+        if not trimmed:
+            if in_imports:
+                existing_imports.append(line)
+            else:
+                body_lines.append(line)
+            continue
+            
+        is_comment = trimmed.startswith("//") or trimmed.startswith("/*") or trimmed.startswith("*")
+        is_import_or_pkg = trimmed.startswith("import ") or trimmed.startswith("package ")
+        
+        if in_imports:
+            if is_import_or_pkg or is_comment:
+                existing_imports.append(line)
+            else:
                 in_imports = False
+                body_lines.append(line)
+        else:
             body_lines.append(line)
 
     body_code = "\n".join(body_lines).rstrip()
@@ -917,9 +928,9 @@ def build_full_test_code(code: str, input_args: str = "") -> dict:
         "import java.util.stream.*;"
     ]
     all_imports = list(existing_imports)
-    existing_set = {re.sub(r'\s+', ' ', imp) for imp in existing_imports}
+    existing_set = {re.sub(r'\s+', ' ', imp.strip()) for imp in existing_imports if imp.strip() and not (imp.strip().startswith("//") or imp.strip().startswith("/*") or imp.strip().startswith("*"))}
     for simp in standard_imports:
-        clean_s = re.sub(r'\s+', ' ', simp)
+        clean_s = re.sub(r'\s+', ' ', simp.strip())
         if clean_s not in existing_set:
             all_imports.append(simp)
 
@@ -979,13 +990,79 @@ def build_full_test_code(code: str, input_args: str = "") -> dict:
         if has_main:
             final_code = imports_block + body_code
         else:
-            # Tìm vị trí dấu đóng ngoặc } cuối cùng của class để chèn main trước đó
-            last_brace_idx = body_code.rfind('}')
-            if last_brace_idx != -1:
-                before_brace = body_code[:last_brace_idx].rstrip()
-                final_code = imports_block + before_brace + "\n\n" + main_method + "\n}\n"
+            # Đếm cấp độ ngoặc nhọn để đóng các hàm con trước khi chèn main
+            orig_level = 0
+            in_string = False
+            in_char = False
+            in_line_comment = False
+            in_block_comment = False
+            
+            i = 0
+            n = len(body_code)
+            while i < n:
+                ch = body_code[i]
+                if in_line_comment:
+                    if ch == '\n':
+                        in_line_comment = False
+                    i += 1
+                    continue
+                if in_block_comment:
+                    if ch == '*' and i + 1 < n and body_code[i+1] == '/':
+                        in_block_comment = False
+                        i += 2
+                    else:
+                        i += 1
+                    continue
+                if in_string:
+                    if ch == '\\' and i + 1 < n:
+                        i += 2
+                    elif ch == '"':
+                        in_string = False
+                        i += 1
+                    else:
+                        i += 1
+                    continue
+                if in_char:
+                    if ch == '\\' and i + 1 < n:
+                        i += 2
+                    elif ch == "'":
+                        in_char = False
+                        i += 1
+                    else:
+                        i += 1
+                    continue
+                if ch == '/' and i + 1 < n and body_code[i+1] == '/':
+                    in_line_comment = True
+                    i += 2
+                    continue
+                if ch == '/' and i + 1 < n and body_code[i+1] == '*':
+                    in_block_comment = True
+                    i += 2
+                    continue
+                if ch == '"':
+                    in_string = True
+                    i += 1
+                    continue
+                if ch == "'":
+                    in_char = True
+                    i += 1
+                    continue
+                    
+                if ch == '{':
+                    orig_level += 1
+                elif ch == '}':
+                    orig_level -= 1
+                i += 1
+                
+            adjusted_body = body_code.rstrip()
+            if orig_level > 1:
+                adjusted_body += "\n" + "    }\n" * (orig_level - 1)
+                
+            if orig_level <= 0 and adjusted_body.endswith('}'):
+                adjusted_body = adjusted_body[:-1].rstrip()
+                final_code = imports_block + adjusted_body + "\n\n" + main_method + "\n}\n"
             else:
-                final_code = imports_block + body_code + "\n\n" + main_method + "\n}\n"
+                final_code = imports_block + adjusted_body + "\n\n" + main_method + "\n}\n"
     else:
         # Chưa có class, tự động bọc vào public class <class_name>
         final_code = imports_block + f"public class {class_name} {{\n\n" + body_code + "\n\n" + main_method + "\n}\n"

@@ -28,13 +28,13 @@ echo Trinh duyet se tu dong mo trong 2 giay...
 start "" cmd /c "timeout /t 2 /nobreak >nul & start http://127.0.0.1:5000"
 
 :: Hugging Face / Torch cache (tránh ghi vào C:\)
-set HF_HOME=D:/Temp/.cache/huggingface
-set HUGGINGFACE_HUB_CACHE=D:\Temp\.cache\huggingface
-set TRANSFORMERS_CACHE=D:/Temp/.cache/huggingface
-set HF_HUB_CACHE=D:/Temp/.cache/huggingface/hub
-set TORCH_HOME=D:/Temp/.cache/torch
-set TEMP=D:\Temp
-set TMP=D:\Temp
+@REM set HF_HOME=D:/Temp/.cache/huggingface
+@REM set HUGGINGFACE_HUB_CACHE=D:\Temp\.cache\huggingface
+@REM set TRANSFORMERS_CACHE=D:/Temp/.cache/huggingface
+@REM set HF_HUB_CACHE=D:/Temp/.cache/huggingface/hub
+@REM set TORCH_HOME=D:/Temp/.cache/torch
+@REM set TEMP=D:\Temp
+@REM set TMP=D:\Temp
 
 :: Chay Flask backend
 python prototype/app.py

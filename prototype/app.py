@@ -19,7 +19,8 @@ args, unknown = parser.parse_known_args()
 
 MOCK_MODE = args.mock
 
-from flask import Flask, request, jsonify, render_template
+import json
+from flask import Flask, request, jsonify, render_template, Response
 
 try:
     from prototype.prompt_enhancer import enhance_prompt, STANDARD_IMPORTS_HEADER
@@ -203,284 +204,387 @@ def generate():
     max_new_tokens = int(data.get("max_new_tokens", 512))
     enable_lang = bool(data.get("enable_language_tag", False))
     enable_cot = bool(data.get("enable_cot", False))
+    input_args = data.get("input_args", "")
     
     if not prompt:
         return jsonify({"error": "Prompt khong duoc de trong."}), 400
-        
-    start_time = time.time()
-    
-    # 1. TỐI ƯU HÓA VÀ CHUẨN HÓA PROMPT THEO 6 QUY TẮC ND4
-    enhancement = enhance_prompt(
-        prompt,
-        enable_language_tag=enable_lang,
-        enable_cot=enable_cot
-    )
-    final_prompt = enhancement["prefix"]
-    input_type = enhancement["input_type"]
-    
-    # 2. XỬ LÝ MOCK MODE (GIẢ LẬP SUY LUẬN)
-    if MOCK_MODE:
-        # Giả lập thời gian suy luận (1.5 giây)
-        time.sleep(1.5)
-        
-        cleaned_code = ""
-        prompt_lower = prompt.lower()
-        
-        # Nhận diện các bài toán phổ biến trong Mock mode
-        if "rollingmax" in prompt_lower or "rolling max" in prompt_lower:
-            if input_type == "NL":
-                cleaned_code = """List<Integer> rollingMax(List<Integer> numbers) {
-        List<Integer> result = new ArrayList<>();
-        if (numbers.isEmpty()) return result;
-        int max = numbers.get(0);
-        for (int n : numbers) {
-            max = Math.max(max, n);
-            result.add(max);
-        }
-        return result;
-    }
-}"""
-            else:
-                cleaned_code = """
-        List<Integer> result = new ArrayList<>();
-        if (numbers.isEmpty()) return result;
-        int max = numbers.get(0);
-        for (int n : numbers) {
-            max = Math.max(max, n);
-            result.add(max);
-        }
-        return result;
-    }
-}"""
-        elif "removeduplicates" in prompt_lower or "remove duplicates" in prompt_lower:
-            if input_type == "NL":
-                cleaned_code = """List<Integer> removeDuplicates(List<Integer> numbers) {
-        List<Integer> result = new ArrayList<>();
-        for (int n : numbers) {
-            int count = 0;
-            for (int x : numbers) {
-                if (x == n) count++;
-            }
-            if (count == 1) {
-                result.add(n);
-            }
-        }
-        return result;
-    }
-}"""
-            else:
-                cleaned_code = """
-        List<Integer> result = new ArrayList<>();
-        for (int n : numbers) {
-            int count = 0;
-            for (int x : numbers) {
-                if (x == n) count++;
-            }
-            if (count == 1) {
-                result.add(n);
-            }
-        }
-        return result;
-    }
-}"""
-        elif "sorteven" in prompt_lower or "sort even" in prompt_lower or "chẵn" in prompt_lower:
-            if input_type == "NL":
-                cleaned_code = """List<Integer> sortEven(List<Integer> l) {
-        List<Integer> evens = new ArrayList<>();
-        for (int i = 0; i < l.size(); i += 2) {
-            evens.add(l.get(i));
-        }
-        Collections.sort(evens);
-        List<Integer> result = new ArrayList<>(l);
-        int evenIdx = 0;
-        for (int i = 0; i < result.size(); i += 2) {
-            result.set(i, evens.get(evenIdx++));
-        }
-        return result;
-    }
-}"""
-            else:
-                cleaned_code = """
-        List<Integer> evens = new ArrayList<>();
-        for (int i = 0; i < l.size(); i += 2) {
-            evens.add(l.get(i));
-        }
-        Collections.sort(evens);
-        List<Integer> result = new ArrayList<>(l);
-        int evenIdx = 0;
-        for (int i = 0; i < result.size(); i += 2) {
-            result.set(i, evens.get(evenIdx++));
-        }
-        return result;
-    }
-}"""
-        elif "willitfly" in prompt_lower or "will it fly" in prompt_lower:
-            if input_type == "NL":
-                cleaned_code = """boolean willItFly(List<Integer> q, int w) {
-        int n = q.size();
-        for (int i = 0; i < n / 2; i++) {
-            if (!q.get(i).equals(q.get(n - 1 - i))) {
-                return false;
-            }
-        }
-        int sum = 0;
-        for (int val : q) {
-            sum += val;
-        }
-        return sum <= w;
-    }
-}"""
-            else:
-                cleaned_code = """
-        int n = q.size();
-        for (int i = 0; i < n / 2; i++) {
-            if (!q.get(i).equals(q.get(n - 1 - i))) {
-                return false;
-            }
-        }
-        int sum = 0;
-        for (int val : q) {
-            sum += val;
-        }
-        return sum <= w;
-    }
-}"""
-        elif "nguyên tố" in prompt_lower or "prime" in prompt_lower:
-            if input_type == "NL":
-                cleaned_code = """boolean isPrime(int n) {
-        if (n <= 1) return false;
-        for (int i = 2; i * i <= n; i++) {
-            if (n % i == 0) return false;
-        }
-        return true;
-    }
-}"""
-            else:
-                cleaned_code = """
-        if (n <= 1) return false;
-        for (int i = 2; i * i <= n; i++) {
-            if (n % i == 0) return false;
-        }
-        return true;
-    }
-}"""
-        elif "giai thừa" in prompt_lower or "factorial" in prompt_lower:
-            if input_type == "NL":
-                cleaned_code = """long factorial(int n) {
-        if (n <= 1) return 1;
-        long res = 1;
-        for (int i = 2; i <= n; i++) {
-            res *= i;
-        }
-        return res;
-    }
-}"""
-            else:
-                cleaned_code = """
-        if (n <= 1) return 1;
-        long res = 1;
-        for (int i = 2; i <= n; i++) {
-            res *= i;
-        }
-        return res;
-    }
-}"""
-        elif "đảo ngược" in prompt_lower or "reverse" in prompt_lower:
-            if input_type == "NL":
-                cleaned_code = """String reverse(String s) {
-        if (s == null) return null;
-        return new StringBuilder(s).reverse().toString();
-    }
-}"""
-            else:
-                cleaned_code = """
-        if (s == null) return null;
-        return new StringBuilder(s).reverse().toString();
-    }
-}"""
-        else:
-            if input_type == "NL":
-                cleaned_code = """Object solve() {
-        // TIEN TRINH GIA LAP (MOCK MODE)
-        // System is currently running in user-interface evaluation mode.
-        
-        System.out.println("Hello from Antigravity Mock Mode!");
-        return null;
-    }
-}"""
-            else:
-                cleaned_code = """
-        // TIEN TRINH GIA LAP (MOCK MODE)
-        // System is currently running in user-interface evaluation mode.
-        
-        System.out.println("Hello from Antigravity Mock Mode!");
-        return null;
-    }
-}"""
-        
-        elapsed = time.time() - start_time
-        input_args = data.get("input_args", "")
-        res_full = build_full_test_code(final_prompt + cleaned_code, input_args)
-        full_code = res_full["full_code"]
-        
-        return jsonify({
-            "generated_code": cleaned_code,
-            "full_code": full_code,
-            "raw_output": cleaned_code,
-            "enhanced_prompt": final_prompt,
-            "input_type": input_type,
-            "time_taken": f"{elapsed:.2f}s (Simulated)"
-        })
 
-    # 3. XỬ LÝ INFERENCE THỰC TẾ TRÊN MODEL
-    if model is None or tokenizer is None:
-        return jsonify({"error": "Mo hinh chua duoc tai len he thong."}), 500
-        
-    try:
-        inputs = tokenizer(final_prompt, return_tensors="pt").to(model.device)
-        input_length = inputs.input_ids.shape[1]
-        
-        # Thiết lập EOS tokens
-        eos_ids = [tokenizer.eos_token_id]
-        extra_eos = tokenizer.convert_tokens_to_ids("<|endoftext|>")
-        if isinstance(extra_eos, int) and extra_eos != tokenizer.unk_token_id and extra_eos not in eos_ids:
-            eos_ids.append(extra_eos)
+    def generate_stream():
+        try:
+            # 1. Khởi tạo yêu cầu sinh mã
+            yield json.dumps({"step": "init", "text": "> Task: Khởi tạo yêu cầu sinh mã", "type": "task"}) + "\n"
+            yield json.dumps({"step": "params", "text": f"Đang nạp tham số cấu hình suy luận (temperature={temperature}, max_tokens={max_new_tokens})...", "type": "normal"}) + "\n"
             
-        do_sample = temperature > 0
-        
-        with torch.no_grad():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                do_sample=do_sample,
-                temperature=temperature if do_sample else None,
-                top_p=0.95 if do_sample else None,
-                pad_token_id=tokenizer.eos_token_id,
-                eos_token_id=eos_ids,
-                stop_strings=STOP_STRINGS,
-                tokenizer=tokenizer,
+            # 2. Áp dụng quy tắc Prompt Engineering
+            yield json.dumps({"step": "enhance_start", "text": "> Task: Áp dụng quy tắc Prompt Engineering (ND4)", "type": "task"}) + "\n"
+            
+            start_time = time.time()
+            enhancement = enhance_prompt(
+                prompt,
+                enable_language_tag=enable_lang,
+                enable_cot=enable_cot
             )
+            final_prompt = enhancement["prefix"]
+            input_type = enhancement["input_type"]
             
-        gen_ids = outputs[0][input_length:]
-        gen_text = tokenizer.decode(gen_ids, skip_special_tokens=True)
-        cleaned_code = clean_output(gen_text)
+            yield json.dumps({"step": "enhance_info", "text": f"Định dạng đầu vào phát hiện: {input_type}.", "type": "normal"}) + "\n"
+            
+            rules_applied = ["RULE-JAVA-DECL-NO-DOC", "RULE-CLEAR-SYNTAX-OUTPUT", "RULE-REPEAT-INSTR-AT-END"]
+            if enable_lang:
+                rules_applied.append("RULE-TRAINED-KW-JAVA")
+            if enable_cot or input_type == "NL":
+                rules_applied.append("RULE-ZEROSHOT-CHAIN-OF-THOUGHT")
+            if input_type in ("NL", "METHOD_ONLY"):
+                rules_applied.append("RULE-INCL-INSTR")
+                
+            yield json.dumps({"step": "enhance_rules", "text": f"Đã áp dụng thành công các quy tắc tối ưu hóa: {', '.join(rules_applied)}.", "type": "normal"}) + "\n"
+            
+            # 3. Kết nối máy chủ AI
+            yield json.dumps({"step": "model_start", "text": "> Task: Kết nối máy chủ AI", "type": "task"}) + "\n"
+            
+            if MOCK_MODE:
+                yield json.dumps({"step": "model_info", "text": "Thiết bị xử lý: CPU (Mock Mode).", "type": "normal"}) + "\n"
+            else:
+                yield json.dumps({"step": "model_info", "text": f"Thiết bị xử lý: {device.upper()}.", "type": "normal"}) + "\n"
+            
+            # 4. Tiến trình suy luận sinh mã
+            yield json.dumps({"step": "inference_start", "text": "> Task: Tiến trình suy luận sinh mã", "type": "task"}) + "\n"
+            
+            cleaned_code = ""
+            gen_text = ""
+            
+            if MOCK_MODE:
+                time.sleep(0.3)
+                yield json.dumps({"step": "inference_progress_1", "text": "[10%] Bắt đầu phân rã bài toán và sinh chuỗi token...", "type": "normal"}) + "\n"
+                time.sleep(0.3)
+                yield json.dumps({"step": "inference_progress_2", "text": "[35%] Phân tích logic giải thuật bài toán...", "type": "normal"}) + "\n"
+                time.sleep(0.3)
+                yield json.dumps({"step": "inference_progress_3", "text": "[60%] Rà soát lỗi cú pháp Java sơ bộ...", "type": "normal"}) + "\n"
+                time.sleep(0.3)
+                yield json.dumps({"step": "inference_progress_4", "text": "[85%] Định dạng hoàn chỉnh cấu trúc class...", "type": "normal"}) + "\n"
+                
+                cleaned_code = ""
+                prompt_lower = prompt.lower()
+                
+                # Nhận diện các bài toán phổ biến trong Mock mode
+                if "rollingmax" in prompt_lower or "rolling max" in prompt_lower:
+                    if input_type == "NL":
+                        cleaned_code = """List<Integer> rollingMax(List<Integer> numbers) {
+        List<Integer> result = new ArrayList<>();
+        if (numbers.isEmpty()) return result;
+        int max = numbers.get(0);
+        for (int n : numbers) {
+            max = Math.max(max, n);
+            result.add(max);
+        }
+        return result;
+    }
+}"""
+                    else:
+                        cleaned_code = """
+        List<Integer> result = new ArrayList<>();
+        if (numbers.isEmpty()) return result;
+        int max = numbers.get(0);
+        for (int n : numbers) {
+            max = Math.max(max, n);
+            result.add(max);
+        }
+        return result;
+    }
+}"""
+                elif "removeduplicates" in prompt_lower or "remove duplicates" in prompt_lower:
+                    if input_type == "NL":
+                        cleaned_code = """List<Integer> removeDuplicates(List<Integer> numbers) {
+        List<Integer> result = new ArrayList<>();
+        for (int n : numbers) {
+            int count = 0;
+            for (int x : numbers) {
+                if (x == n) count++;
+            }
+            if (count == 1) {
+                result.add(n);
+            }
+        }
+        return result;
+    }
+}"""
+                    else:
+                        cleaned_code = """
+        List<Integer> result = new ArrayList<>();
+        for (int n : numbers) {
+            int count = 0;
+            for (int x : numbers) {
+                if (x == n) count++;
+            }
+            if (count == 1) {
+                result.add(n);
+            }
+        }
+        return result;
+    }
+}"""
+                elif "sorteven" in prompt_lower or "sort even" in prompt_lower or "chẵn" in prompt_lower:
+                    if input_type == "NL":
+                        cleaned_code = """List<Integer> sortEven(List<Integer> l) {
+        List<Integer> evens = new ArrayList<>();
+        for (int i = 0; i < l.size(); i += 2) {
+            evens.add(l.get(i));
+        }
+        Collections.sort(evens);
+        List<Integer> result = new ArrayList<>(l);
+        int evenIdx = 0;
+        for (int i = 0; i < result.size(); i += 2) {
+            result.set(i, evens.get(evenIdx++));
+        }
+        return result;
+    }
+}"""
+                    else:
+                        cleaned_code = """
+        List<Integer> evens = new ArrayList<>();
+        for (int i = 0; i < l.size(); i += 2) {
+            evens.add(l.get(i));
+        }
+        Collections.sort(evens);
+        List<Integer> result = new ArrayList<>(l);
+        int evenIdx = 0;
+        for (int i = 0; i < result.size(); i += 2) {
+            result.set(i, evens.get(evenIdx++));
+        }
+        return result;
+    }
+}"""
+                elif "willitfly" in prompt_lower or "will it fly" in prompt_lower:
+                    if input_type == "NL":
+                        cleaned_code = """boolean willItFly(List<Integer> q, int w) {
+        int n = q.size();
+        for (int i = 0; i < n / 2; i++) {
+            if (!q.get(i).equals(q.get(n - 1 - i))) {
+                return false;
+            }
+        }
+        int sum = 0;
+        for (int val : q) {
+            sum += val;
+        }
+        return sum <= w;
+    }
+}"""
+                    else:
+                        cleaned_code = """
+        int n = q.size();
+        for (int i = 0; i < n / 2; i++) {
+            if (!q.get(i).equals(q.get(n - 1 - i))) {
+                return false;
+            }
+        }
+        int sum = 0;
+        for (int val : q) {
+            sum += val;
+        }
+        return sum <= w;
+    }
+}"""
+                elif "nguyên tố" in prompt_lower or "prime" in prompt_lower:
+                    if input_type == "NL":
+                        cleaned_code = """boolean isPrime(int n) {
+        if (n <= 1) return false;
+        for (int i = 2; i * i <= n; i++) {
+            if (n % i == 0) return false;
+        }
+        return true;
+    }
+}"""
+                    else:
+                        cleaned_code = """
+        if (n <= 1) return false;
+        for (int i = 2; i * i <= n; i++) {
+            if (n % i == 0) return false;
+        }
+        return true;
+    }
+}"""
+                elif "giai thừa" in prompt_lower or "factorial" in prompt_lower:
+                    if input_type == "NL":
+                        cleaned_code = """long factorial(int n) {
+        if (n <= 1) return 1;
+        long res = 1;
+        for (int i = 2; i <= n; i++) {
+            res *= i;
+        }
+        return res;
+    }
+}"""
+                    else:
+                        cleaned_code = """
+        if (n <= 1) return 1;
+        long res = 1;
+        for (int i = 2; i <= n; i++) {
+            res *= i;
+        }
+        return res;
+    }
+}"""
+                elif "đảo ngược" in prompt_lower or "reverse" in prompt_lower:
+                    if input_type == "NL":
+                        cleaned_code = """String reverse(String s) {
+        if (s == null) return null;
+        return new StringBuilder(s).reverse().toString();
+    }
+}"""
+                    else:
+                        cleaned_code = """
+        if (s == null) return null;
+        return new StringBuilder(s).reverse().toString();
+    }
+}"""
+                else:
+                    if input_type == "NL":
+                        cleaned_code = """Object solve() {
+        // TIEN TRINH GIA LAP (MOCK MODE)
+        // System is currently running in user-interface evaluation mode.
         
-        elapsed = time.time() - start_time
-        input_args = data.get("input_args", "")
-        res_full = build_full_test_code(final_prompt + cleaned_code, input_args)
-        full_code = res_full["full_code"]
+        System.out.println("Hello from Antigravity Mock Mode!");
+        return null;
+    }
+}"""
+                    else:
+                        cleaned_code = """
+        // TIEN TRINH GIA LAP (MOCK MODE)
+        // System is currently running in user-interface evaluation mode.
         
-        return jsonify({
-            "generated_code": cleaned_code,
-            "full_code": full_code,
-            "raw_output": gen_text,
-            "enhanced_prompt": final_prompt,
-            "input_type": input_type,
-            "time_taken": f"{elapsed:.2f}s"
-        })
-        
-    except Exception as e:
-        return jsonify({"error": f"Loi trong qua trinh sinh code: {str(e)}"}), 500
+        System.out.println("Hello from Antigravity Mock Mode!");
+        return null;
+    }
+}"""
+                
+                yield json.dumps({"step": "inference_progress_5", "text": "[95%] Streaming code tokens into output buffer...", "type": "normal"}) + "\n"
+                time.sleep(0.1)
+                gen_text = cleaned_code
+                elapsed = time.time() - start_time
+                time_taken_str = f"{elapsed:.2f}s (Simulated)"
+            else:
+                yield json.dumps({"step": "inference_progress", "text": "Đang thực hiện suy luận trên mô hình... Vui lòng đợi.", "type": "normal"}) + "\n"
+                if model is None or tokenizer is None:
+                    raise ValueError("Mô hình chưa được tải lên hệ thống.")
+                    
+                inputs = tokenizer(final_prompt, return_tensors="pt").to(model.device)
+                input_length = inputs.input_ids.shape[1]
+                
+                eos_ids = [tokenizer.eos_token_id]
+                extra_eos = tokenizer.convert_tokens_to_ids("<|endoftext|>")
+                if isinstance(extra_eos, int) and extra_eos != tokenizer.unk_token_id and extra_eos not in eos_ids:
+                    eos_ids.append(extra_eos)
+                    
+                do_sample = temperature > 0
+                
+                with torch.no_grad():
+                    outputs = model.generate(
+                        **inputs,
+                        max_new_tokens=max_new_tokens,
+                        do_sample=do_sample,
+                        temperature=temperature if do_sample else None,
+                        top_p=0.95 if do_sample else None,
+                        pad_token_id=tokenizer.eos_token_id,
+                        eos_token_id=eos_ids,
+                        stop_strings=STOP_STRINGS,
+                        tokenizer=tokenizer,
+                    )
+                    
+                gen_ids = outputs[0][input_length:]
+                gen_text = tokenizer.decode(gen_ids, skip_special_tokens=True)
+                cleaned_code = clean_output(gen_text)
+                elapsed = time.time() - start_time
+                time_taken_str = f"{elapsed:.2f}s"
+                
+            # 5. Xác thực biên dịch tự động
+            yield json.dumps({"step": "compile_start", "text": "> Task: Biên dịch & Kiểm thử tự động", "type": "task"}) + "\n"
+            yield json.dumps({"step": "compile_info", "text": "Đang tiến hành biên dịch thử file Problem.java bằng javac...", "type": "normal"}) + "\n"
+            
+            res_full = build_full_test_code(final_prompt + cleaned_code, input_args)
+            full_code = res_full["full_code"]
+            class_name = res_full["class_name"]
+            
+            # Tạo thư mục tạm thời trong workspace/scratch để chạy javac kiểm tra lỗi cú pháp
+            scratch_dir = _REPO_ROOT / "scratch"
+            if not scratch_dir.exists():
+                scratch_dir.mkdir(exist_ok=True)
+                
+            temp_dir = tempfile.mkdtemp(dir=str(scratch_dir.resolve()))
+            compile_success = False
+            compile_output_msg = ""
+            
+            try:
+                # Ghi file <class_name>.java
+                with open(os.path.join(temp_dir, f"{class_name}.java"), "w", encoding="utf-8") as f:
+                    f.write(full_code)
+                    
+                # Tìm thư viện javatuples-1.2.jar
+                jar_name = "javatuples-1.2.jar"
+                jar_path_root = _REPO_ROOT / jar_name
+                jar_path_eval = _REPO_ROOT / "evaluate" / jar_name
+                actual_jar_path = ""
+                if jar_path_root.exists():
+                    actual_jar_path = str(jar_path_root.resolve())
+                elif jar_path_eval.exists():
+                    actual_jar_path = str(jar_path_eval.resolve())
+                else:
+                    actual_jar_path = str(jar_path_root.resolve())
+                    
+                classpath = f".{os.pathsep}{actual_jar_path}"
+                
+                # Biên dịch
+                compile_cmd = ["javac", "-cp", classpath, f"{class_name}.java"]
+                compile_proc = subprocess.run(
+                    compile_cmd,
+                    cwd=temp_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                
+                if compile_proc.returncode == 0:
+                    compile_success = True
+                else:
+                    compile_output_msg = compile_proc.stderr
+            except Exception as e_comp:
+                compile_output_msg = str(e_comp)
+            finally:
+                try:
+                    shutil.rmtree(temp_dir)
+                except Exception:
+                    pass
+            
+            if compile_success:
+                yield json.dumps({"step": "compile_success", "text": "Biên dịch thử nghiệm Problem.java... THÀNH CÔNG.", "type": "normal"}) + "\n"
+                yield json.dumps({"step": "build_finished", "text": f"BUILD SUCCESSFUL trong {time_taken_str}", "type": "success"}) + "\n"
+            else:
+                # Trích xuất 5 dòng lỗi đầu tiên để hiển thị trực tiếp cho gọn gàng
+                err_lines = compile_output_msg.splitlines()
+                summary_err = "\n".join(err_lines[:5])
+                if len(err_lines) > 5:
+                    summary_err += f"\n... (và {len(err_lines) - 5} dòng lỗi khác)"
+                yield json.dumps({"step": "compile_fail", "text": f"Cảnh báo biên dịch: Có lỗi cú pháp trong mã nguồn sinh ra!\n{summary_err}", "type": "error"}) + "\n"
+                yield json.dumps({"step": "build_finished", "text": "BUILD SUCCESSFUL (với cảnh báo lỗi cú pháp)", "type": "warning"}) + "\n"
+                
+            # 6. Trả về payload kết quả cuối cùng ở chunk cuối
+            yield json.dumps({
+                "step": "result",
+                "generated_code": cleaned_code,
+                "full_code": full_code,
+                "raw_output": gen_text,
+                "enhanced_prompt": final_prompt,
+                "input_type": input_type,
+                "time_taken": time_taken_str
+            }) + "\n"
+            
+        except Exception as e:
+            yield json.dumps({"step": "error", "text": f"Lỗi hệ thống trong quá trình sinh mã: {str(e)}", "type": "error"}) + "\n"
+
+    return Response(generate_stream(), mimetype="application/x-ndjson", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no"
+    })
         
 # =====================================================
 #  PHÂN TÍCH SIGNATURE & GỢI Ý INPUT THÔNG MINH
@@ -611,11 +715,16 @@ def smart_preprocess_input(input_str: str, params: list) -> str:
     if args_str.startswith('(') and args_str.endswith(')'):
         args_str = args_str[1:-1].strip()
     
-    if not params or not args_str:
-        # Không có thông tin tham số, trả về nguyên gốc
+    if not params:
         if not args_str.startswith('('):
             return f"({args_str})"
         return args_str
+        
+    if not args_str:
+        # Nếu người dùng không nhập đối số và hàm yêu cầu tham số,
+        # tự động sinh các giá trị mặc định tương ứng để tránh lỗi biên dịch.
+        defaults = [suggest_value_for_type(p["type"]) for p in params]
+        return "(" + ", ".join(defaults) + ")"
     
     # Tách các argument theo dấu phẩy (nhưng tôn trọng dấu ngoặc lồng nhau)
     raw_args = _split_args(args_str)
@@ -833,14 +942,23 @@ def build_full_test_code(code: str, input_args: str = "") -> dict:
         }}
     }}"""
         else:
+            # Kiểm tra xem kiểu trả về có phải là mảng hay không để hiển thị đẹp hơn
+            is_array = ret_type.endswith("[]")
+            if is_array:
+                # Nếu là mảng đa chiều hoặc mảng đối tượng, dùng Arrays.deepToString, ngược lại dùng Arrays.toString
+                is_multidim = "][" in ret_type or not any(ret_type.startswith(x) for x in ["int", "long", "double", "float", "boolean", "char", "byte", "short"])
+                print_stmt = f"System.out.println(\"-> Kết quả: \" + java.util.Arrays.deepToString(result));" if is_multidim else f"System.out.println(\"-> Kết quả: \" + java.util.Arrays.toString(result));"
+            else:
+                print_stmt = "System.out.println(\"-> Kết quả: \" + result);"
+
             main_method = f"""    // =========================================================================
     // HÀM MAIN KIỂM THỬ THỰC THI (TEST RUNNER)
     // =========================================================================
     public static void main(String[] args) {{
         try {{
             System.out.println("=== CHẠY KIỂM THỬ HÀM {method_name} ===");
-            var result = {method_name}{args_str};
-            System.out.println("-> Kết quả: " + result);
+            {ret_type} result = {method_name}{args_str};
+            {print_stmt}
         }} catch (Throwable t) {{
             System.err.println("Lỗi thực thi ngoại lệ: " + t.getMessage());
             t.printStackTrace(System.err);

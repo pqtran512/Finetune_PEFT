@@ -307,93 +307,61 @@ document.addEventListener("DOMContentLoaded", () => {
     checkModelStatus();
     checkInterval = setInterval(checkModelStatus, 3000);
 
-    let consoleLogTimer = null;
-    let currentConsoleStep = 0;
-    const consoleSteps = [
-        { text: "> Task: Khởi tạo yêu cầu sinh mã", type: "task" },
-        { text: "Đang nạp tham số cấu hình suy luận...", type: "normal" },
-        { text: "Khởi tạo môi trường lập trình Java... OK.", type: "normal" },
-        
-        { text: "> Task: Áp dụng quy tắc Java (RULE-5)", type: "task" },
-        
-        { text: "> Task: Kết nối máy chủ AI", type: "task" },
-        { text: "Đang mở kết nối với máy chủ suy luận DeepMind Fine-Tuned Model...", type: "normal" },
-        { text: "Kết nối thành công. Thiết bị xử lý: CPU (Mock Mode).", type: "normal" },
-        
-        { text: "> Task: Tiến trình suy luận sinh mã", type: "task" },
-        { text: "[10%] Bắt đầu phân rã bài toán và sinh chuỗi token...", type: "normal" },
-        { text: "[35%] Phân tích logic giải thuật bài toán...", type: "normal" },
-        { text: "[60%] Rà soát lỗi cú pháp Java sơ bộ...", type: "normal" },
-        { text: "[85%] Định dạng hoàn chỉnh cấu trúc class...", type: "normal" }
-    ];
-
     function startConsoleLog() {
         const logBody = document.getElementById("console-log-body");
         const progressFill = document.getElementById("progress-bar-fill");
-        if (!logBody) return;
-
-        logBody.innerHTML = "";
-        currentConsoleStep = 0;
+        if (logBody) logBody.innerHTML = "";
         if (progressFill) progressFill.style.width = "0%";
-
-        function addLogLine(text, style = "normal") {
-            const line = document.createElement("div");
-            line.className = `console-log-line ${style}`;
-            line.textContent = text;
-            logBody.appendChild(line);
-            logBody.scrollTop = logBody.scrollHeight;
-        }
-
-        // In dòng đầu tiên ngay
-        addLogLine(consoleSteps[0].text, consoleSteps[0].type);
-        currentConsoleStep = 1;
-
-        consoleLogTimer = setInterval(() => {
-            if (currentConsoleStep < consoleSteps.length) {
-                addLogLine(consoleSteps[currentConsoleStep].text, consoleSteps[currentConsoleStep].type);
-                currentConsoleStep++;
-                if (progressFill) {
-                    const percent = (currentConsoleStep / consoleSteps.length) * 85;
-                    progressFill.style.width = `${percent}%`;
-                }
-            } else {
-                addLogLine("[95%] Streaming code tokens into output buffer...", "normal");
-            }
-        }, 160); // In nhanh hơn một chút để tạo cảm giác tự nhiên của compiler
     }
 
-    function stopConsoleLog(isSuccess = true) {
-        if (consoleLogTimer) {
-            clearInterval(consoleLogTimer);
-            consoleLogTimer = null;
-        }
-
+    function addLogLine(text, style = "normal") {
         const logBody = document.getElementById("console-log-body");
-        const progressFill = document.getElementById("progress-bar-fill");
         if (!logBody) return;
-
-        function addLogLine(text, style) {
-            const line = document.createElement("div");
-            line.className = `console-log-line ${style}`;
-            line.textContent = text;
-            logBody.appendChild(line);
-            logBody.scrollTop = logBody.scrollHeight;
+        const line = document.createElement("div");
+        line.className = `console-log-line ${style}`;
+        
+        if (style === "error") {
+            line.style.whiteSpace = "pre-wrap";
+            line.style.fontFamily = "var(--font-mono)";
         }
+        
+        line.textContent = text;
+        logBody.appendChild(line);
+        logBody.scrollTop = logBody.scrollHeight;
+    }
 
-        if (isSuccess) {
-            addLogLine("> Task: Biên dịch & Chạy thử nghiệm", "task");
-            addLogLine("Đang tiến hành biên dịch file Problem.java... THÀNH CÔNG.", "normal");
-            addLogLine("Thực thi kịch bản TestRunner.java tự động... VƯỢT QUA.", "normal");
-            addLogLine("BUILD SUCCESSFUL trong 1.48 giây", "success");
-            if (progressFill) progressFill.style.width = "100%";
-        } else {
-            addLogLine("> Task: Biên dịch thất bại", "task");
-            addLogLine("BUILD FAILED (Quá trình suy luận AI bị gián đoạn hoặc sinh mã không hợp lệ)", "error");
+    function updateProgressBar(step) {
+        const progressFill = document.getElementById("progress-bar-fill");
+        if (!progressFill) return;
+        
+        let percent = 0;
+        switch (step) {
+            case "init": percent = 5; break;
+            case "params": percent = 10; break;
+            case "enhance_start": percent = 20; break;
+            case "enhance_info": percent = 30; break;
+            case "enhance_rules": percent = 45; break;
+            case "model_start": percent = 55; break;
+            case "model_info": percent = 65; break;
+            case "inference_start": percent = 72; break;
+            case "inference_progress": percent = 80; break;
+            case "inference_progress_1": percent = 75; break;
+            case "inference_progress_2": percent = 80; break;
+            case "inference_progress_3": percent = 84; break;
+            case "inference_progress_4": percent = 88; break;
+            case "inference_progress_5": percent = 92; break;
+            case "compile_start": percent = 94; break;
+            case "compile_info": percent = 96; break;
+            case "compile_success": percent = 98; break;
+            case "compile_fail": percent = 98; break;
+            case "build_finished": percent = 100; break;
+            default: percent = 95;
         }
+        progressFill.style.width = `${percent}%`;
     }
 
     // Xử lý sự kiện Sinh code
-    btnGenerate.addEventListener("click", () => {
+    btnGenerate.addEventListener("click", async () => {
         const prompt = promptInput.value.trim();
         if (!prompt) {
             alert("Vui lòng nhập prompt hoặc khai báo hàm cần sinh mã!");
@@ -410,44 +378,81 @@ document.addEventListener("DOMContentLoaded", () => {
             temperature: currentTemperature,
             max_new_tokens: currentMaxTokens,
             enable_cot: false, // Loại bỏ quy tắc 14
-            enable_language_tag: true // Luôn áp dụng quy tắc 5
+            enable_language_tag: true, // Luôn áp dụng quy tắc 5
+            input_args: testInputArgs ? testInputArgs.value.trim() : ""
         };
 
-        fetch("/api/generate", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-        })
-            .then(res => {
-                if (!res.ok) {
-                    return res.json().then(data => { throw new Error(data.error || "Lỗi không xác định"); });
+        try {
+            const response = await fetch("/api/generate", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || `Lỗi từ server: ${response.status}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+            let finalResult = null;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop(); // Giữ lại phần thừa (nếu có) để xử lý trong chunk sau
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) continue;
+
+                    try {
+                        const data = JSON.parse(trimmed);
+                        if (data.step === "result") {
+                            finalResult = data;
+                        } else if (data.step === "error") {
+                            addLogLine(data.text, "error");
+                        } else if (data.text) {
+                            addLogLine(data.text, data.type || "normal");
+                            updateProgressBar(data.step);
+                        }
+                    } catch (e) {
+                        console.error("Lỗi parse chunk JSON:", e, trimmed);
+                    }
                 }
-                return res.json();
-            })
-            .then(data => {
-                stopConsoleLog(true);
+            }
 
-                // Chờ 500ms để hiệu ứng IDE log chạy xong
-                setTimeout(() => {
-                    loadingOverlay.classList.add("hidden");
-                    btnGenerate.disabled = false;
+            // Chờ 800ms để người dùng xem dòng chữ BUILD SUCCESSFUL/WARNING
+            setTimeout(() => {
+                loadingOverlay.classList.add("hidden");
+                btnGenerate.disabled = false;
 
+                if (finalResult) {
                     // Hiển thị code kết quả
                     emptyState.classList.add("hidden");
                     codeContainer.classList.remove("hidden");
 
-                    // Lấy code hoàn chỉnh từ backend
-                    let fullCode = data.full_code || data.generated_code;
-                    if (!fullCode.includes("class Problem") && !fullCode.startsWith(prompt)) {
-                        fullCode = prompt + fullCode;
+                    // Lấy code hoàn chỉnh từ backend (không bao gồm hàm main kiểm thử trong editor)
+                    let fullCode = finalResult.enhanced_prompt 
+                        ? (finalResult.enhanced_prompt + finalResult.generated_code) 
+                        : (finalResult.full_code || finalResult.generated_code);
+                    if (!finalResult.enhanced_prompt) {
+                        if (!fullCode.includes("class Problem") && !fullCode.startsWith(prompt)) {
+                            fullCode = prompt + fullCode;
+                        }
                     }
 
                     currentFullCode = fullCode;
                     renderCode();
 
-                    statsTime.textContent = `Thời gian: ${data.time_taken}`;
+                    statsTime.textContent = `Thời gian: ${finalResult.time_taken}`;
                     statsTime.classList.remove("hidden");
                     btnCopy.disabled = false;
                     btnDownload.disabled = false;
@@ -458,16 +463,21 @@ document.addEventListener("DOMContentLoaded", () => {
                     consoleOutput.innerHTML = '<span class="console-placeholder">Nhập đối số đầu vào ở trên và nhấn "Chạy hàm" để xem kết quả tính toán.</span>';
 
                     fetchSuggestedInput(currentFullCode);
-                }, 600);
-            })
-            .catch(err => {
-                stopConsoleLog(false);
-                setTimeout(() => {
-                    loadingOverlay.classList.add("hidden");
-                    btnGenerate.disabled = false;
-                    alert("Lỗi khi sinh code: " + err.message);
-                }, 1000);
-            });
+                } else {
+                    alert("Không nhận được kết quả sinh mã hoàn chỉnh từ máy chủ.");
+                }
+            }, 800);
+
+        } catch (err) {
+            addLogLine("> Task: Lỗi kết nối / Hệ thống", "task");
+            addLogLine("Quá trình sinh mã thất bại: " + err.message, "error");
+            
+            setTimeout(() => {
+                loadingOverlay.classList.add("hidden");
+                btnGenerate.disabled = false;
+                alert("Lỗi khi sinh code: " + err.message);
+            }, 2000);
+        }
     });
 
     // Xử lý sự kiện Sao chép (Copy)

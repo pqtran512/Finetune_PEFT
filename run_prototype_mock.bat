@@ -22,10 +22,10 @@ if %errorlevel% neq 0 (
     pip install flask
 )
 
-:: Mo trinh duyet
+:: Mo trinh duyet sau 2 giay de dam bao Web Server da san sang lang nghe
 echo Dang khoi dong Web Server o CHE DO GIA LAP tren http://127.0.0.1:5000...
-echo Trinh duyet se tu dong mo trong giay lat...
-start http://127.0.0.1:5000
+echo Trinh duyet se tu dong mo trong 2 giay...
+start "" cmd /c "timeout /t 2 /nobreak >nul & start http://127.0.0.1:5000"
 
 :: Chay Flask backend voi tham so --mock
 python prototype/app.py --mock

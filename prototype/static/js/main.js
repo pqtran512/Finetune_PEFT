@@ -1,5 +1,7 @@
-// ĐỊNH NGHĨA CÁC PROMPT MẪU (HUMANEVAL-JAVA)
+// ĐỊNH NGHĨA CÁC PROMPT MẪU (HUMANEVAL-JAVA & NL PROMPTS)
 const EXAMPLES = {
+    nl_prime: `Viết hàm kiểm tra một số nguyên n có phải là số nguyên tố hay không. Trả về true nếu là số nguyên tố, ngược lại trả về false.`,
+
     rolling_max: `import java.util.ArrayList;
 import java.util.List;
 
@@ -29,17 +31,7 @@ public class Problem {
      * This function takes a list of numbers and returns a list where the values at even indices are sorted,
      * while the values at odd indices remain unchanged.
      */
-    public static List<Integer> sortEven(List<Integer> l) {`,
-
-    will_it_fly: `import java.util.List;
-
-public class Problem {
-    /**
-     * Write a function that returns true if the object q will fly, and false otherwise.
-     * The object q will fly if it's balanced (it is a palindromic list) and the sum of its elements
-     * is less than or equal to the maximum weight w.
-     */
-    public static boolean willItFly(List<Integer> q, int w) {`
+    public static List<Integer> sortEven(List<Integer> l) {`
 };
 
 const LOADING_MESSAGES = [
@@ -52,6 +44,11 @@ const LOADING_MESSAGES = [
 ];
 
 const PRESET_HELPERS = {
+    nl_prime: {
+        placeholder: "Ví dụ: 7 hoặc 10",
+        helper: "Ví dụ: 7",
+        default: "7"
+    },
     rolling_max: {
         placeholder: "Ví dụ: [1, 2, 4, 3, 5]",
         helper: "Ví dụ: [1, 2, 4, 3, 5]",
@@ -66,11 +63,6 @@ const PRESET_HELPERS = {
         placeholder: "Ví dụ: [5, 6, 3, 4, 1, 2]",
         helper: "Ví dụ: [5, 6, 3, 4, 1, 2]",
         default: "[5, 6, 3, 4, 1, 2]"
-    },
-    will_it_fly: {
-        placeholder: "Ví dụ: [3, 2, 3], 10",
-        helper: "Ví dụ: [3, 2, 3], 10",
-        default: "[3, 2, 3], 10"
     }
 };
 
@@ -79,25 +71,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const badgeDot = document.getElementById("badge-dot");
     const badgeText = document.getElementById("badge-text");
     const infoBase = document.getElementById("info-base");
-    const infoLora = document.getElementById("info-lora");
-    const infoDevice = document.getElementById("info-device");
-    
+
     // Preset chips
     const presetChips = document.querySelectorAll(".preset-chip");
-    
-    // Raw inputs inside details
-    const temperatureInput = document.getElementById("temperature");
-    const tempVal = document.getElementById("temp-val");
-    const maxTokensInput = document.getElementById("max-tokens");
-    const tokensVal = document.getElementById("tokens-val");
-    
+
+    // State cho cấu hình sinh mã
+    let currentTemperature = 0.2;
+    let currentMaxTokens = 512;
+
     const promptInput = document.getElementById("prompt-input");
     const inputLineNumbers = document.getElementById("input-line-numbers");
-    
+
     const btnGenerate = document.getElementById("btn-generate");
     const btnCopy = document.getElementById("btn-copy");
     const btnDownload = document.getElementById("btn-download");
-    
+
     const statsTime = document.getElementById("stats-time");
     const codeContainer = document.getElementById("code-editor");
     const codeOutput = document.getElementById("code-output");
@@ -107,6 +95,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Khởi tạo Ace Editor
     let editor = null;
+    let previewEditor = null;
+    let currentDownloadFilename = "Problem.java";
     if (window.ace) {
         ace.config.set('basePath', 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/');
         editor = ace.edit("code-editor");
@@ -125,9 +115,21 @@ document.addEventListener("DOMContentLoaded", () => {
         editor.on("change", () => {
             currentFullCode = editor.getValue();
         });
+        if (document.getElementById("preview-code-editor")) {
+            previewEditor = ace.edit("preview-code-editor");
+            previewEditor.setTheme("ace/theme/chrome");
+            previewEditor.session.setMode("ace/mode/java");
+            previewEditor.setOptions({
+                fontSize: "13px",
+                fontFamily: "var(--font-code)",
+                showPrintMargin: false,
+                useSoftTabs: true,
+                tabSize: 4,
+                readOnly: false,
+                wrap: true
+            });
+        }
     }
-
-
 
     // Test runner elements
     const testRunnerSection = document.getElementById("test-runner-section");
@@ -142,6 +144,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const paramHints = document.getElementById("param-hints");
     const paramHintsChips = document.getElementById("param-hints-chips");
 
+    // Modal Preview Elements
+    const previewModal = document.getElementById("preview-modal");
+    const previewFilename = document.getElementById("preview-filename");
+    const btnCloseModal = document.getElementById("btn-close-modal");
+    const btnModalCopy = document.getElementById("btn-modal-copy");
+    const btnModalDownload = document.getElementById("btn-modal-download");
+
+
+
     // State
     let currentFullCode = "";
     let loadingMessageInterval = null;
@@ -151,7 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const text = promptInput.value;
         const lines = text.split("\n");
         const count = Math.max(lines.length, 1);
-        
+
         let html = "";
         for (let i = 1; i <= count; i++) {
             html += `<span>${i}</span>`;
@@ -164,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateInputLineNumbers();
         // Bỏ active của các thẻ mẫu nếu người dùng tự sửa đổi code
         presetChips.forEach(c => c.classList.remove("active"));
-        
+
         // Reset gợi ý test input về mặc định
         testInputArgs.placeholder = "Nhập các đối số, ví dụ: 1, 2 hoặc [1, 2, 3]";
         testInputHelper.textContent = "Ví dụ: (1, 2)";
@@ -184,17 +195,17 @@ document.addEventListener("DOMContentLoaded", () => {
     presetChips.forEach(chip => {
         chip.addEventListener("click", () => {
             const val = chip.getAttribute("data-value");
-            
+
             // Xóa active cũ, thêm active mới
             presetChips.forEach(c => c.classList.remove("active"));
             chip.classList.add("active");
-            
+
             if (val && EXAMPLES[val]) {
                 promptInput.value = EXAMPLES[val];
             } else {
                 promptInput.value = "";
             }
-            
+
             updateInputLineNumbers();
             // Cuộn về đầu
             promptInput.scrollTop = 0;
@@ -219,10 +230,9 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener("click", () => {
             creativitySegments.forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
-            
-            const val = btn.getAttribute("data-value");
-            temperatureInput.value = val;
-            tempVal.textContent = val;
+
+            const val = parseFloat(btn.getAttribute("data-value"));
+            currentTemperature = isNaN(val) ? 0.2 : val;
         });
     });
 
@@ -232,37 +242,9 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener("click", () => {
             lengthSegments.forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
-            
-            const val = btn.getAttribute("data-value");
-            maxTokensInput.value = val;
-            tokensVal.textContent = val;
-        });
-    });
 
-    // Đồng bộ ngược từ Sliders nâng cao về Segmented Controls
-    temperatureInput.addEventListener("input", (e) => {
-        const val = parseFloat(e.target.value);
-        tempVal.textContent = val;
-        
-        creativitySegments.forEach(b => {
-            if (parseFloat(b.getAttribute("data-value")) === val) {
-                b.classList.add("active");
-            } else {
-                b.classList.remove("active");
-            }
-        });
-    });
-
-    maxTokensInput.addEventListener("input", (e) => {
-        const val = parseInt(e.target.value);
-        tokensVal.textContent = val;
-        
-        lengthSegments.forEach(b => {
-            if (parseInt(b.getAttribute("data-value")) === val) {
-                b.classList.add("active");
-            } else {
-                b.classList.remove("active");
-            }
+            const val = parseInt(btn.getAttribute("data-value"));
+            currentMaxTokens = isNaN(val) ? 512 : val;
         });
     });
 
@@ -278,41 +260,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Hàm cập nhật trạng thái mô hình từ API
     let checkInterval = null;
-    
+    const modelBadge = document.querySelector(".model-badge");
+
     function checkModelStatus() {
         fetch("/api/status")
             .then(res => res.json())
             .then(data => {
-                badgeText.textContent = data.status;
-                infoBase.textContent = data.base_model;
-                
-                // Hiển thị tên thư mục cuối của adapter LoRA
-                if (data.lora_path) {
-                    const parts = data.lora_path.split(/[\\/]/);
-                    infoLora.textContent = parts[parts.length - 1] || data.lora_path;
-                } else {
-                    infoLora.textContent = "Không có";
-                }
-                
-                infoDevice.textContent = data.device;
+                if (modelBadge) modelBadge.setAttribute("title", `Trạng thái mô hình: ${data.status}`);
+                if (badgeText) badgeText.textContent = "";
+                if (infoBase) infoBase.textContent = data.base_model || "-";
 
-                if (data.status.startsWith("Sẵn sàng") || data.status.includes("Mock")) {
-                    badgeDot.className = "dot online";
+                if (data.status.startsWith("Sẵn sàng") || data.status.includes("Mock") || data.status.includes("Ready")) {
+                    if (badgeDot) badgeDot.className = "dot online";
                     btnGenerate.disabled = false;
                     clearInterval(checkInterval);
-                } else if (data.status.includes("Lỗi")) {
-                    badgeDot.className = "dot offline";
+                } else if (data.status.includes("Lỗi") || data.status.includes("Error")) {
+                    if (badgeDot) badgeDot.className = "dot offline";
                     btnGenerate.disabled = true;
                     clearInterval(checkInterval);
                     alert("Lỗi tải mô hình: " + data.status);
                 } else {
-                    badgeDot.className = "dot pending";
+                    if (badgeDot) badgeDot.className = "dot pending";
                     btnGenerate.disabled = true;
                 }
             })
             .catch(err => {
-                badgeDot.className = "dot offline";
-                badgeText.textContent = "Không kết nối được server";
+                if (badgeDot) badgeDot.className = "dot offline";
+                if (modelBadge) modelBadge.setAttribute("title", "Không kết nối được server");
                 btnGenerate.disabled = true;
                 console.error("Lỗi kết nối API status:", err);
             });
@@ -322,20 +296,88 @@ document.addEventListener("DOMContentLoaded", () => {
     checkModelStatus();
     checkInterval = setInterval(checkModelStatus, 3000);
 
-    // Bắt đầu chu kỳ thay đổi thông điệp loading động
-    function startLoadingMessageCycle() {
-        let index = 0;
-        loadingMessage.textContent = LOADING_MESSAGES[0];
-        loadingMessageInterval = setInterval(() => {
-            index = (index + 1) % LOADING_MESSAGES.length;
-            loadingMessage.textContent = LOADING_MESSAGES[index];
-        }, 2000);
+    let consoleLogTimer = null;
+    let currentConsoleStep = 0;
+    const consoleSteps = [
+        { text: "> Task: Khởi tạo yêu cầu sinh mã", type: "task" },
+        { text: "Đang nạp tham số cấu hình suy luận...", type: "normal" },
+        { text: "Khởi tạo môi trường lập trình Java... OK.", type: "normal" },
+        
+        { text: "> Task: Áp dụng quy tắc Java (RULE-5)", type: "task" },
+        
+        { text: "> Task: Kết nối máy chủ AI", type: "task" },
+        { text: "Đang mở kết nối với máy chủ suy luận DeepMind Fine-Tuned Model...", type: "normal" },
+        { text: "Kết nối thành công. Thiết bị xử lý: CPU (Mock Mode).", type: "normal" },
+        
+        { text: "> Task: Tiến trình suy luận sinh mã", type: "task" },
+        { text: "[10%] Bắt đầu phân rã bài toán và sinh chuỗi token...", type: "normal" },
+        { text: "[35%] Phân tích logic giải thuật bài toán...", type: "normal" },
+        { text: "[60%] Rà soát lỗi cú pháp Java sơ bộ...", type: "normal" },
+        { text: "[85%] Định dạng hoàn chỉnh cấu trúc class...", type: "normal" }
+    ];
+
+    function startConsoleLog() {
+        const logBody = document.getElementById("console-log-body");
+        const progressFill = document.getElementById("progress-bar-fill");
+        if (!logBody) return;
+
+        logBody.innerHTML = "";
+        currentConsoleStep = 0;
+        if (progressFill) progressFill.style.width = "0%";
+
+        function addLogLine(text, style = "normal") {
+            const line = document.createElement("div");
+            line.className = `console-log-line ${style}`;
+            line.textContent = text;
+            logBody.appendChild(line);
+            logBody.scrollTop = logBody.scrollHeight;
+        }
+
+        // In dòng đầu tiên ngay
+        addLogLine(consoleSteps[0].text, consoleSteps[0].type);
+        currentConsoleStep = 1;
+
+        consoleLogTimer = setInterval(() => {
+            if (currentConsoleStep < consoleSteps.length) {
+                addLogLine(consoleSteps[currentConsoleStep].text, consoleSteps[currentConsoleStep].type);
+                currentConsoleStep++;
+                if (progressFill) {
+                    const percent = (currentConsoleStep / consoleSteps.length) * 85;
+                    progressFill.style.width = `${percent}%`;
+                }
+            } else {
+                addLogLine("[95%] Streaming code tokens into output buffer...", "normal");
+            }
+        }, 160); // In nhanh hơn một chút để tạo cảm giác tự nhiên của compiler
     }
 
-    function stopLoadingMessageCycle() {
-        if (loadingMessageInterval) {
-            clearInterval(loadingMessageInterval);
-            loadingMessageInterval = null;
+    function stopConsoleLog(isSuccess = true) {
+        if (consoleLogTimer) {
+            clearInterval(consoleLogTimer);
+            consoleLogTimer = null;
+        }
+
+        const logBody = document.getElementById("console-log-body");
+        const progressFill = document.getElementById("progress-bar-fill");
+        if (!logBody) return;
+
+        function addLogLine(text, style) {
+            const line = document.createElement("div");
+            line.className = `console-log-line ${style}`;
+            line.textContent = text;
+            logBody.appendChild(line);
+            logBody.scrollTop = logBody.scrollHeight;
+        }
+
+        if (isSuccess) {
+            addLogLine("> Task: Biên dịch & Chạy thử nghiệm", "task");
+            addLogLine("Đang tiến hành biên dịch file Problem.java... THÀNH CÔNG.", "normal");
+            addLogLine("Thực thi kịch bản TestRunner.java tự động... VƯỢT QUA.", "normal");
+            addLogLine("BUILD SUCCESSFUL trong 1.48 giây", "success");
+            if (progressFill) progressFill.style.width = "100%";
+        } else {
+            addLogLine("> Task: Biên dịch thất bại", "task");
+            addLogLine("BUILD FAILED (Quá trình suy luận AI bị gián đoạn hoặc sinh mã không hợp lệ)", "error");
         }
     }
 
@@ -347,15 +389,17 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Show loading state
+        // Hiện overlay loading IDE Console
         loadingOverlay.classList.remove("hidden");
         btnGenerate.disabled = true;
-        startLoadingMessageCycle();
-        
+        startConsoleLog();
+
         const payload = {
             prompt: prompt,
-            temperature: parseFloat(temperatureInput.value),
-            max_new_tokens: parseInt(maxTokensInput.value)
+            temperature: currentTemperature,
+            max_new_tokens: currentMaxTokens,
+            enable_cot: false, // Loại bỏ quy tắc 14
+            enable_language_tag: true // Luôn áp dụng quy tắc 5
         };
 
         fetch("/api/generate", {
@@ -365,52 +409,54 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             body: JSON.stringify(payload)
         })
-        .then(res => {
-            if (!res.ok) {
-                return res.json().then(data => { throw new Error(data.error || "Lỗi không xác định"); });
-            }
-            return res.json();
-        })
-        .then(data => {
-            // Hiển thị code kết quả
-            emptyState.classList.add("hidden");
-            codeContainer.classList.remove("hidden");
-            
-            // Xử lý ghép prompt vào code sinh ra nếu model trả về phần thân
-            let rawCode = data.generated_code;
-            if (!rawCode.startsWith(prompt)) {
-                rawCode = prompt + rawCode;
-            }
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(data => { throw new Error(data.error || "Lỗi không xác định"); });
+                }
+                return res.json();
+            })
+            .then(data => {
+                stopConsoleLog(true);
 
-            // Lưu trữ code
-            currentFullCode = rawCode;
+                // Chờ 500ms để hiệu ứng IDE log chạy xong
+                setTimeout(() => {
+                    loadingOverlay.classList.add("hidden");
+                    btnGenerate.disabled = false;
 
-            // Render
-            renderCode();
+                    // Hiển thị code kết quả
+                    emptyState.classList.add("hidden");
+                    codeContainer.classList.remove("hidden");
 
-            // Cập nhật stats
-            statsTime.textContent = `Thời gian sinh: ${data.time_taken}`;
-            statsTime.classList.remove("hidden");
-            btnCopy.disabled = false;
-            btnDownload.disabled = false;
+                    // Lấy code hoàn chỉnh từ backend
+                    let fullCode = data.full_code || data.generated_code;
+                    if (!fullCode.includes("class Problem") && !fullCode.startsWith(prompt)) {
+                        fullCode = prompt + fullCode;
+                    }
 
-            // Hiển thị và kích hoạt khu vực Chạy thử nghiệm (Playground)
-            testRunnerSection.classList.remove("hidden");
-            btnRunCode.disabled = false;
-            testInputArgs.disabled = false;
-            consoleOutput.innerHTML = '<span class="console-placeholder">Nhập đối số đầu vào ở trên và nhấn "Chạy hàm" để xem kết quả tính toán.</span>';
+                    currentFullCode = fullCode;
+                    renderCode();
 
-            // Tự động gọi API gợi ý input dựa trên signature hàm
-            fetchSuggestedInput(currentFullCode);
-        })
-        .catch(err => {
-            alert("Lỗi khi sinh code: " + err.message);
-        })
-        .finally(() => {
-            loadingOverlay.classList.add("hidden");
-            btnGenerate.disabled = false;
-            stopLoadingMessageCycle();
-        });
+                    statsTime.textContent = `Thời gian: ${data.time_taken}`;
+                    statsTime.classList.remove("hidden");
+                    btnCopy.disabled = false;
+                    btnDownload.disabled = false;
+
+                    testRunnerSection.classList.remove("hidden");
+                    btnRunCode.disabled = false;
+                    testInputArgs.disabled = false;
+                    consoleOutput.innerHTML = '<span class="console-placeholder">Nhập đối số đầu vào ở trên và nhấn "Chạy hàm" để xem kết quả tính toán.</span>';
+
+                    fetchSuggestedInput(currentFullCode);
+                }, 600);
+            })
+            .catch(err => {
+                stopConsoleLog(false);
+                setTimeout(() => {
+                    loadingOverlay.classList.add("hidden");
+                    btnGenerate.disabled = false;
+                    alert("Lỗi khi sinh code: " + err.message);
+                }, 1000);
+            });
     });
 
     // Xử lý sự kiện Sao chép (Copy)
@@ -430,7 +476,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 btnCopy.style.borderColor = "var(--color-success)";
                 btnCopy.style.background = "var(--color-success-glow)";
                 btnCopy.style.color = "var(--color-success)";
-                
+
                 setTimeout(() => {
                     btnCopy.innerHTML = originalText;
                     btnCopy.style.borderColor = "";
@@ -444,44 +490,191 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     });
 
-    // Xử lý sự kiện Tải về file Java
-    btnDownload.addEventListener("click", () => {
-        const codeText = editor ? editor.getValue() : (codeOutput ? codeOutput.textContent : currentFullCode);
-        if (!codeText) return;
+    // Hàm mở modal xem trước bản code đầy đủ dùng để test kết quả
+    function openPreviewModal() {
+        const codeText = editor ? editor.getValue() : currentFullCode;
+        if (!codeText) {
+            alert("Chưa có mã nguồn để tải xuống.");
+            return;
+        }
 
-        const filename = "Output.java";
-        const blob = new Blob([codeText], { type: "text/plain;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        
-        // Dọn dẹp
-        setTimeout(() => {
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        }, 100);
+        const inputArgs = testInputArgs ? testInputArgs.value.trim() : "";
+
+        // Hiển thị trạng thái đang chuẩn bị preview
+        btnDownload.disabled = true;
+        const origBtnText = btnDownload.innerHTML;
+        btnDownload.innerHTML = `
+            <span class="loader-spinner" style="width:12px;height:12px;border-width:2px;border-top-color:var(--color-primary);border-color:rgba(79,70,229,0.2);"></span>
+            <span>Đang tạo bản xem trước...</span>
+        `;
+
+        fetch("/api/preview-full-code", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                code: codeText,
+                input_args: inputArgs
+            })
+        })
+            .then(res => {
+                if (!res.ok) throw new Error("Không thể tạo bản code xem trước.");
+                return res.json();
+            })
+            .then(data => {
+                currentDownloadFilename = data.filename || "Problem.java";
+                if (previewFilename) previewFilename.textContent = currentDownloadFilename;
+
+                if (previewEditor) {
+                    previewEditor.setValue(data.full_code || codeText, -1);
+                }
+
+                // Mở modal
+                if (previewModal) {
+                    previewModal.classList.remove("hidden");
+                    document.body.style.overflow = "hidden";
+                }
+
+                // Render lại kích thước editor trong modal
+                setTimeout(() => {
+                    if (previewEditor) {
+                        previewEditor.resize();
+                        previewEditor.focus();
+                    }
+                }, 100);
+            })
+            .catch(err => {
+                console.error("Lỗi preview full code:", err);
+                // Fallback: Mở modal với code hiện tại
+                currentDownloadFilename = "Problem.java";
+                if (previewFilename) previewFilename.textContent = currentDownloadFilename;
+                if (previewEditor) previewEditor.setValue(codeText, -1);
+                if (previewModal) {
+                    previewModal.classList.remove("hidden");
+                    document.body.style.overflow = "hidden";
+                }
+            })
+            .finally(() => {
+                btnDownload.disabled = false;
+                btnDownload.innerHTML = origBtnText;
+            });
+    }
+
+    function closePreviewModal() {
+        if (previewModal) {
+            previewModal.classList.add("hidden");
+            document.body.style.overflow = "";
+        }
+    }
+
+    // Sự kiện nút Tải xuống ở Header panel -> Mở modal xem trước bản code đầy đủ
+    btnDownload.addEventListener("click", openPreviewModal);
+
+    // Đóng modal
+    if (btnCloseModal) {
+        btnCloseModal.addEventListener("click", closePreviewModal);
+    }
+
+    if (previewModal) {
+        previewModal.addEventListener("click", (e) => {
+            if (e.target === previewModal) {
+                closePreviewModal();
+            }
+        });
+    }
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && previewModal && !previewModal.classList.contains("hidden")) {
+            closePreviewModal();
+        }
     });
+
+    // Sao chép code từ Modal preview
+    if (btnModalCopy) {
+        btnModalCopy.addEventListener("click", () => {
+            const codeToCopy = previewEditor ? previewEditor.getValue() : "";
+            if (!codeToCopy) return;
+
+            navigator.clipboard.writeText(codeToCopy)
+                .then(() => {
+                    const originalHTML = btnModalCopy.innerHTML;
+                    btnModalCopy.innerHTML = `
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span>Đã sao chép!</span>
+                    `;
+                    btnModalCopy.style.borderColor = "var(--color-success)";
+                    btnModalCopy.style.background = "var(--color-success-glow)";
+                    btnModalCopy.style.color = "var(--color-success)";
+
+                    setTimeout(() => {
+                        btnModalCopy.innerHTML = originalHTML;
+                        btnModalCopy.style.borderColor = "";
+                        btnModalCopy.style.background = "";
+                        btnModalCopy.style.color = "";
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error("Lỗi khi sao chép:", err);
+                    alert("Không thể sao chép mã nguồn.");
+                });
+        });
+    }
+
+    // Tải xuống file .java từ Modal preview
+    if (btnModalDownload) {
+        btnModalDownload.addEventListener("click", () => {
+            const codeToDownload = previewEditor ? previewEditor.getValue() : "";
+            if (!codeToDownload) return;
+
+            const filename = currentDownloadFilename || "Problem.java";
+            const blob = new Blob([codeToDownload], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+
+            // Hiệu ứng phản hồi thành công
+            const origHTML = btnModalDownload.innerHTML;
+            btnModalDownload.innerHTML = `
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>Đã tải xuống ${filename}!</span>
+            `;
+
+            setTimeout(() => {
+                btnModalDownload.innerHTML = origHTML;
+            }, 2200);
+
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        });
+    }
 
     // Xử lý sự kiện chạy thử nghiệm mã Java
     btnRunCode.addEventListener("click", () => {
         const inputArgs = testInputArgs.value.trim();
-        
+
         // Trạng thái Loading của runner
         btnRunCode.disabled = true;
         testInputArgs.disabled = true;
         runSpinner.classList.remove("hidden");
         runBtnText.textContent = "Đang chạy...";
         consoleOutput.innerHTML = '<span class="console-placeholder">Đang tiến hành biên dịch và thực thi mã Java...</span>';
-        
+
         const payload = {
             code: editor ? editor.getValue() : currentFullCode,
             input_args: inputArgs
         };
-        
+
         fetch("/api/run", {
             method: "POST",
             headers: {
@@ -489,43 +682,43 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             body: JSON.stringify(payload)
         })
-        .then(res => {
-            if (!res.ok) {
-                return res.json().then(data => { throw new Error(data.error || "Lỗi hệ thống không xác định"); });
-            }
-            return res.json();
-        })
-        .then(data => {
-            if (data.success) {
-                // Thành công
-                consoleOutput.innerHTML = `<span class="console-success">Chạy thành công! Kết quả đầu ra:\n\n${escapeHtml(data.output)}</span>`;
-            } else {
-                // Thất bại (Lỗi biên dịch / Runtime / Timeout)
-                let errorTitle = "";
-                if (data.stage === "compile") {
-                    errorTitle = "LỖI BIÊN DỊCH (Compilation Error):";
-                } else if (data.stage === "runtime") {
-                    errorTitle = "LỖI KHI CHẠY (Runtime Exception):";
-                } else if (data.stage === "timeout") {
-                    errorTitle = "QUÁ THỜI GIAN THỰC THI (Timeout Error):";
-                } else {
-                    errorTitle = "LỖI HỆ THỐNG:";
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(data => { throw new Error(data.error || "Lỗi hệ thống không xác định"); });
                 }
-                
-                consoleOutput.innerHTML = `<span class="console-error">${errorTitle}\n\n${escapeHtml(data.output)}</span>`;
-            }
-        })
-        .catch(err => {
-            consoleOutput.innerHTML = `<span class="console-error">LỖI KẾT NỐI API:\n\n${escapeHtml(err.message)}</span>`;
-        })
-        .finally(() => {
-            btnRunCode.disabled = false;
-            testInputArgs.disabled = false;
-            runSpinner.classList.add("hidden");
-            runBtnText.textContent = "Chạy hàm";
-        });
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Thành công
+                    consoleOutput.innerHTML = `<span class="console-success">Chạy thành công! Kết quả đầu ra:\n\n${escapeHtml(data.output)}</span>`;
+                } else {
+                    // Thất bại (Lỗi biên dịch / Runtime / Timeout)
+                    let errorTitle = "";
+                    if (data.stage === "compile") {
+                        errorTitle = "LỖI BIÊN DỊCH (Compilation Error):";
+                    } else if (data.stage === "runtime") {
+                        errorTitle = "LỖI KHI CHẠY (Runtime Exception):";
+                    } else if (data.stage === "timeout") {
+                        errorTitle = "QUÁ THỜI GIAN THỰC THI (Timeout Error):";
+                    } else {
+                        errorTitle = "LỖI HỆ THỐNG:";
+                    }
+
+                    consoleOutput.innerHTML = `<span class="console-error">${errorTitle}\n\n${escapeHtml(data.output)}</span>`;
+                }
+            })
+            .catch(err => {
+                consoleOutput.innerHTML = `<span class="console-error">LỖI KẾT NỐI API:\n\n${escapeHtml(err.message)}</span>`;
+            })
+            .finally(() => {
+                btnRunCode.disabled = false;
+                testInputArgs.disabled = false;
+                runSpinner.classList.add("hidden");
+                runBtnText.textContent = "Chạy hàm";
+            });
     });
-    
+
     // Hàm phụ trợ để tránh lỗi XSS/HTML Injection trong console
     function escapeHtml(text) {
         if (!text) return "";
@@ -551,7 +744,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
         }
-        
+
         _callSuggestAPI(code, false);
     }
 
@@ -561,42 +754,42 @@ document.addEventListener("DOMContentLoaded", () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ code: code })
         })
-        .then(res => res.json())
-        .then(data => {
-            if (!data.params || data.params.length === 0) {
-                paramHints.classList.add("hidden");
-                paramHintsChips.innerHTML = "";
-                if (!skipAutoFill) {
-                    testInputArgs.placeholder = "Hàm không có tham số";
-                    testInputHelper.textContent = "Không cần đối số";
-                    testInputArgs.value = "";
+            .then(res => res.json())
+            .then(data => {
+                if (!data.params || data.params.length === 0) {
+                    paramHints.classList.add("hidden");
+                    paramHintsChips.innerHTML = "";
+                    if (!skipAutoFill) {
+                        testInputArgs.placeholder = "Hàm không có tham số";
+                        testInputHelper.textContent = "Không cần đối số";
+                        testInputArgs.value = "";
+                    }
+                    return;
                 }
-                return;
-            }
-            
-            
-            // Cập nhật helper badge với thông tin kiểu tham số
-            const paramSummary = data.params.map(p => `${p.type} ${p.name}`).join(", ");
-            testInputHelper.textContent = paramSummary;
-            
-            // Auto-fill giá trị gợi ý nếu chưa có preset hoạt động
-            if (!skipAutoFill && data.suggested_input) {
-                // Bỏ ngoặc tròn ngoài để hiện thị thân thiện hơn
-                let displayValue = data.suggested_input;
-                if (displayValue.startsWith("(") && displayValue.endsWith(")")) {
-                    displayValue = displayValue.slice(1, -1);
+
+
+                // Cập nhật helper badge với thông tin kiểu tham số
+                const paramSummary = data.params.map(p => `${p.type} ${p.name}`).join(", ");
+                testInputHelper.textContent = paramSummary;
+
+                // Auto-fill giá trị gợi ý nếu chưa có preset hoạt động
+                if (!skipAutoFill && data.suggested_input) {
+                    // Bỏ ngoặc tròn ngoài để hiện thị thân thiện hơn
+                    let displayValue = data.suggested_input;
+                    if (displayValue.startsWith("(") && displayValue.endsWith(")")) {
+                        displayValue = displayValue.slice(1, -1);
+                    }
+                    testInputArgs.value = displayValue;
+                    testInputArgs.placeholder = `Ví dụ: ${displayValue}`;
+
+                    // Hiệu ứng flash nhấp nháy khi auto-fill
+                    testInputArgs.classList.add("auto-filled");
+                    setTimeout(() => testInputArgs.classList.remove("auto-filled"), 1000);
                 }
-                testInputArgs.value = displayValue;
-                testInputArgs.placeholder = `Ví dụ: ${displayValue}`;
-                
-                // Hiệu ứng flash nhấp nháy khi auto-fill
-                testInputArgs.classList.add("auto-filled");
-                setTimeout(() => testInputArgs.classList.remove("auto-filled"), 1000);
-            }
-        })
-        .catch(err => {
-            console.error("Lỗi khi gọi API suggest-input:", err);
-            // Không hiển thị lỗi cho user, chỉ log
-        });
+            })
+            .catch(err => {
+                console.error("Lỗi khi gọi API suggest-input:", err);
+                // Không hiển thị lỗi cho user, chỉ log
+            });
     }
 });

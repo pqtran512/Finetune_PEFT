@@ -213,7 +213,7 @@ def evaluate(input_file="java_qwen_inference.jsonl"):
                 jf.write(full_code)
 
             # 1. Biên dịch (javac) - Thêm classpath chứa JAR
-            cp = _run_cmd(["javac", "-cp", classpath, file_name])
+            cp = _run_cmd(["javac", "-encoding", "utf-8", "-cp", classpath, file_name])
             
             status = "FAILED"
             if cp.returncode != 0:

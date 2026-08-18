@@ -213,7 +213,7 @@ def generate():
         try:
             # 1. Khởi tạo yêu cầu sinh mã
             yield json.dumps({"step": "init", "text": "> Task: Khởi tạo yêu cầu sinh mã", "type": "task"}) + "\n"
-            yield json.dumps({"step": "params", "text": f"Đang nạp tham số cấu hình suy luận (temperature={temperature}, max_tokens={max_new_tokens})...", "type": "normal"}) + "\n"
+            yield json.dumps({"step": "params", "text": f"Đang nạp tham số cấu hình suy luận", "type": "normal"}) + "\n"
             
             # 2. Áp dụng quy tắc Prompt Engineering
             yield json.dumps({"step": "enhance_start", "text": "> Task: Áp dụng quy tắc Prompt Engineering (ND4)", "type": "task"}) + "\n"
@@ -534,7 +534,7 @@ def generate():
                 classpath = f".{os.pathsep}{actual_jar_path}"
                 
                 # Biên dịch
-                compile_cmd = ["javac", "-cp", classpath, f"{class_name}.java"]
+                compile_cmd = ["javac", "-encoding", "utf-8", "-cp", classpath, f"{class_name}.java"]
                 compile_proc = subprocess.run(
                     compile_cmd,
                     cwd=temp_dir,
@@ -1208,7 +1208,7 @@ public class TestRunner {{
         classpath = f".{os.pathsep}{actual_jar_path}"
         
         # 1. Biên dịch cả 2 file: javac <class_name>.java TestRunner.java
-        compile_cmd = ["javac", "-cp", classpath, f"{class_name}.java", "TestRunner.java"]
+        compile_cmd = ["javac", "-encoding", "utf-8", "-cp", classpath, f"{class_name}.java", "TestRunner.java"]
         compile_proc = subprocess.run(
             compile_cmd,
             cwd=temp_dir,

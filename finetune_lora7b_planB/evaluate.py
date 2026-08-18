@@ -129,7 +129,7 @@ def evaluate(input_file="java_qwen_inference_planB.jsonl"):
                 jf.write(full_code)
 
             sep = ";" if os.name == "nt" else ":"
-            compile_cmd = f'javac -cp ".{sep}{jar_path}" {file_name}'
+            compile_cmd = f'javac -encoding utf-8 -cp ".{sep}{jar_path}" {file_name}'
             cp = subprocess.run(compile_cmd, capture_output=True, text=True, shell=True)
 
             status = "FAILED"

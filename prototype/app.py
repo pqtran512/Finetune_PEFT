@@ -212,11 +212,11 @@ def generate():
     def generate_stream():
         try:
             # 1. Khởi tạo yêu cầu sinh mã
-            yield json.dumps({"step": "init", "text": "> Task: Khởi tạo yêu cầu sinh mã", "type": "task"}) + "\n"
+            yield json.dumps({"step": "init", "text": "> Khởi tạo yêu cầu sinh mã", "type": "task"}) + "\n"
             yield json.dumps({"step": "params", "text": f"Đang nạp tham số cấu hình suy luận", "type": "normal"}) + "\n"
             
             # 2. Áp dụng quy tắc Prompt Engineering
-            yield json.dumps({"step": "enhance_start", "text": "> Task: Áp dụng quy tắc Prompt Engineering (ND4)", "type": "task"}) + "\n"
+            yield json.dumps({"step": "enhance_start", "text": "> Áp dụng quy tắc Prompt Engineering", "type": "task"}) + "\n"
             
             start_time = time.time()
             enhancement = enhance_prompt(
@@ -227,7 +227,13 @@ def generate():
             final_prompt = enhancement["prefix"]
             input_type = enhancement["input_type"]
             
-            yield json.dumps({"step": "enhance_info", "text": f"Định dạng đầu vào phát hiện: {input_type}.", "type": "normal"}) + "\n"
+            input_type_map = {
+                "NL": "Ngôn ngữ tự nhiên (Natural Language)",
+                "METHOD_ONLY": "Chữ ký hàm (Method signature)",
+                "FULL_JAVA": "Mã nguồn Java đầy đủ (Full Java class)"
+            }
+            friendly_input_type = input_type_map.get(input_type, input_type)
+            yield json.dumps({"step": "enhance_info", "text": f"Định dạng đầu vào phát hiện: {friendly_input_type}.", "type": "normal"}) + "\n"
             
             rules_applied = ["RULE-JAVA-DECL-NO-DOC", "RULE-CLEAR-SYNTAX-OUTPUT", "RULE-REPEAT-INSTR-AT-END"]
             if enable_lang:
@@ -240,15 +246,10 @@ def generate():
             yield json.dumps({"step": "enhance_rules", "text": f"Đã áp dụng thành công các quy tắc tối ưu hóa: {', '.join(rules_applied)}.", "type": "normal"}) + "\n"
             
             # 3. Kết nối máy chủ AI
-            yield json.dumps({"step": "model_start", "text": "> Task: Kết nối máy chủ AI", "type": "task"}) + "\n"
-            
-            if MOCK_MODE:
-                yield json.dumps({"step": "model_info", "text": "Thiết bị xử lý: CPU (Mock Mode).", "type": "normal"}) + "\n"
-            else:
-                yield json.dumps({"step": "model_info", "text": f"Thiết bị xử lý: {device.upper()}.", "type": "normal"}) + "\n"
+            yield json.dumps({"step": "model_start", "text": "> Kết nối máy chủ AI", "type": "task"}) + "\n"
             
             # 4. Tiến trình suy luận sinh mã
-            yield json.dumps({"step": "inference_start", "text": "> Task: Tiến trình suy luận sinh mã", "type": "task"}) + "\n"
+            yield json.dumps({"step": "inference_start", "text": "> Tiến trình suy luận sinh mã", "type": "task"}) + "\n"
             
             cleaned_code = ""
             gen_text = ""
@@ -498,7 +499,7 @@ def generate():
                 time_taken_str = f"{elapsed:.2f}s"
                 
             # 5. Xác thực biên dịch tự động
-            yield json.dumps({"step": "compile_start", "text": "> Task: Biên dịch & Kiểm thử tự động", "type": "task"}) + "\n"
+            yield json.dumps({"step": "compile_start", "text": "> Biên dịch & Kiểm thử tự động", "type": "task"}) + "\n"
             yield json.dumps({"step": "compile_info", "text": "Đang tiến hành biên dịch thử file Problem.java bằng javac...", "type": "normal"}) + "\n"
             
             res_full = build_full_test_code(final_prompt + cleaned_code, input_args)

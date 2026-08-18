@@ -469,7 +469,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 800);
 
         } catch (err) {
-            addLogLine("> Task: Lỗi kết nối / Hệ thống", "task");
+            addLogLine("> Lỗi kết nối / Hệ thống", "task");
             addLogLine("Quá trình sinh mã thất bại: " + err.message, "error");
             
             setTimeout(() => {

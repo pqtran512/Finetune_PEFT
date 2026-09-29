@@ -432,9 +432,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     emptyState.classList.add("hidden");
                     codeContainer.classList.remove("hidden");
 
+<<<<<<< HEAD
                     let fullCode = finalResult.enhanced_prompt
                         ? finalResult.enhanced_prompt + finalResult.generated_code
                         : finalResult.full_code || finalResult.generated_code;
+=======
+                    // Lấy code hoàn chỉnh từ backend (không bao gồm hàm main kiểm thử trong editor)
+                    let fullCode = finalResult.enhanced_prompt
+                        ? (finalResult.enhanced_prompt + finalResult.generated_code)
+                        : (finalResult.full_code || finalResult.generated_code);
+>>>>>>> ff713132c0d6d283950e4fe8603e283f7af7ec58
                     if (!finalResult.enhanced_prompt) {
                         if (!fullCode.includes("class Problem") && !fullCode.startsWith(prompt)) {
                             fullCode = prompt + fullCode;
@@ -460,8 +467,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }, 800);
         } catch (err) {
+<<<<<<< HEAD
             addLogLine(t("log.conn_error"), "task");
             addLogLine(t("log.generate_failed", { error: err.message }), "error");
+=======
+            addLogLine("> Lỗi kết nối / Hệ thống", "task");
+            addLogLine("Quá trình sinh mã thất bại: " + err.message, "error");
+>>>>>>> ff713132c0d6d283950e4fe8603e283f7af7ec58
 
             setTimeout(() => {
                 loadingOverlay.classList.add("hidden");

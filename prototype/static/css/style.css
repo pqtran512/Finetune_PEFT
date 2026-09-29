@@ -102,6 +102,49 @@ header {
     margin-top: -1px;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.lang-switch {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid var(--color-border);
+    border-radius: 9999px;
+    padding: 0.2rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    backdrop-filter: blur(6px);
+}
+
+.lang-btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.35rem 0.55rem;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    line-height: 1;
+}
+
+.lang-btn:hover {
+    color: var(--text-main);
+}
+
+.lang-btn.active {
+    background: var(--color-primary);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(79, 70, 229, 0.35);
+}
+
 .model-badge {
     display: inline-flex;
     align-items: center;

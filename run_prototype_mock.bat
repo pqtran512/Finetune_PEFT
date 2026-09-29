@@ -1,7 +1,7 @@
 @echo off
-title Java Code Generator Prototype Launcher (MOCK MODE)
+title AJAC: Automatic Java Code Generator (MOCK MODE)
 echo ==================================================
-echo   Khoi chay Java Code Generator (CHE DO GIA LAP)
+echo   Khoi chay AJAC (CHE DO GIA LAP)
 echo ==================================================
 
 :: Kiem tra virtual environment 'env'

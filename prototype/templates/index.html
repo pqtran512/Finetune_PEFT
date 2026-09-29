@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Java AI Code Generator</title>
+    <title>AJAC: Automatic Java Code Generator</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,11 +30,18 @@
                     <path d="M14 1v3"></path>
                 </svg>
                 <div class="logo-text">
-                    <h1>Java AI Code Generator</h1>
+                    <h1>AJAC</h1>
+                    <span class="logo-sub">Automatic Java Code Generator</span>
                 </div>
             </div>
-            <div class="model-badge" title="Đang kết nối...">
-                <span id="badge-dot" class="dot offline"></span>
+            <div class="header-actions">
+                <div class="lang-switch" role="group" data-i18n-title="lang.switch" title="Language">
+                    <button type="button" class="lang-btn active" data-lang="en" aria-label="English">EN</button>
+                    <button type="button" class="lang-btn" data-lang="vi" aria-label="Tiếng Việt">VI</button>
+                </div>
+                <div class="model-badge" data-i18n-title="badge.connecting" title="Connecting...">
+                    <span id="badge-dot" class="dot offline"></span>
+                </div>
             </div>
         </header>
 
@@ -49,27 +56,29 @@
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                             <line x1="9" y1="3" x2="9" y2="21"></line>
                         </svg>
-                        <h2>Cấu hình & Yêu cầu</h2>
+                        <h2 data-i18n="panel.config">Configuration & Request</h2>
                     </div>
 
                     <div class="card-body">
-                        <!-- YÊU CẦU SINH MÃ (Phía trên) -->
-
-                        <!-- 1. Chọn bài toán mẫu -->
+                        <!-- 1. Sample problems -->
                         <div class="section-group">
-                            <label class="group-label">Chọn bài toán mẫu:</label>
+                            <label class="group-label" data-i18n="label.preset">Sample problems:</label>
                             <div class="preset-chips">
-                                <button type="button" class="preset-chip" data-value="nl_prime">Số nguyên tố</button>
-                                <button type="button" class="preset-chip" data-value="rolling_max">Rolling Max</button>
-                                <button type="button" class="preset-chip" data-value="remove_duplicates">Remove
+                                <button type="button" class="preset-chip" data-value="nl_prime"
+                                    data-i18n="preset.nl_prime">Prime Number</button>
+                                <button type="button" class="preset-chip" data-value="factorial"
+                                    data-i18n="preset.factorial">Factorial</button>
+                                <button type="button" class="preset-chip" data-value="remove_duplicates"
+                                    data-i18n="preset.remove_duplicates">Remove
                                     Duplicates</button>
-                                <button type="button" class="preset-chip" data-value="sort_even">Sort Even</button>
+                                <button type="button" class="preset-chip" data-value="right_triangle"
+                                    data-i18n="preset.right_triangle">Right Triangle</button>
                             </div>
                         </div>
 
-                        <!-- 2. Khai báo hàm / Mô tả yêu cầu (IDE Style - Chiếm không gian co giãn) -->
+                        <!-- 2. Prompt editor -->
                         <div class="input-group flex-grow">
-                            <label>Mô tả yêu cầu:</label>
+                            <label data-i18n="label.prompt">Requirement description:</label>
                             <div class="ide-editor-input">
                                 <div class="ide-editor-header">
                                     <div class="ide-tabs">
@@ -90,39 +99,15 @@
                                         <span>1</span>
                                     </div>
                                     <textarea id="prompt-input"
-                                        placeholder="Nhập mô tả yêu cầu bằng ngôn ngữ tự nhiên hoặc dán khai báo hàm Java vào đây..."></textarea>
+                                        data-i18n-placeholder="prompt.placeholder"
+                                        placeholder="Enter a natural-language description or paste a Java method declaration here..."></textarea>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- CẤU HÌNH SINH MÃ (Phía dưới) -->
-                        <div class="config-section">
-                            <!-- 3. Chế độ sinh mã (Trên 1 dòng riêng) -->
-                            <div class="input-group margin-bottom-sm">
-                                <label>Chế độ sinh mã:</label>
-                                <div class="segmented-control" id="creativity-segments">
-                                    <button type="button" class="segment-btn" data-value="0.0">Chính xác</button>
-                                    <button type="button" class="segment-btn active" data-value="0.2">Cân bằng</button>
-                                    <button type="button" class="segment-btn" data-value="0.7">Sáng tạo</button>
-                                </div>
-                            </div>
-
-                            <!-- 4. Độ dài mã tối đa (Trên 1 dòng riêng bên dưới) -->
-                            <div class="input-group margin-bottom-sm">
-                                <label>Độ dài mã tối đa:</label>
-                                <div class="segmented-control" id="length-segments">
-                                    <button type="button" class="segment-btn" data-value="256">Ngắn</button>
-                                    <button type="button" class="segment-btn active" data-value="512">Vừa</button>
-                                    <button type="button" class="segment-btn" data-value="1024">Dài</button>
-                                </div>
-                            </div>
-
-
-                        </div>
-
-                        <!-- Nút bắt đầu sinh mã -->
+                        <!-- Generate button -->
                         <button id="btn-generate" class="btn-primary" disabled>
-                            <span class="btn-text">Bắt đầu sinh mã Java</span>
+                            <span class="btn-text" data-i18n="btn.generate">Generate Java Code</span>
                             <svg class="send-icon" viewBox="0 0 24 24" width="16" height="16" fill="none"
                                 stroke="currentColor" stroke-width="2">
                                 <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -134,10 +119,9 @@
                 </div>
             </section>
 
-            <!-- Right Panel: Code Output (IDE Style Workspace) -->
+            <!-- Right Panel: Code Output -->
             <section class="output-panel">
                 <div class="card bg-blur full-height">
-                    <!-- Tabbed Header for IDE View -->
                     <div class="ide-editor-header space-between">
                         <div class="ide-tabs">
                             <div class="ide-tab active">
@@ -157,7 +141,7 @@
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                                 </svg>
-                                <span>Sao chép</span>
+                                <span data-i18n="btn.copy">Copy</span>
                             </button>
                             <button id="btn-download" class="btn-secondary" disabled>
                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
@@ -166,13 +150,12 @@
                                     <polyline points="7 10 12 15 17 10"></polyline>
                                     <line x1="12" y1="15" x2="12" y2="3"></line>
                                 </svg>
-                                <span>Tải xuống</span>
+                                <span data-i18n="btn.download">Download</span>
                             </button>
                         </div>
                     </div>
 
                     <div class="card-body no-padding relative overflow-hidden flex-col">
-                        <!-- Loading Overlay (IDE Style Console Loader) -->
                         <div id="loading-overlay" class="overlay hidden">
                             <div class="ide-console-loader">
                                 <div class="console-header">
@@ -181,7 +164,7 @@
                                         <span class="c-btn yellow"></span>
                                         <span class="c-btn green"></span>
                                     </div>
-                                    <span class="console-title">Inference Log</span>
+                                    <span class="console-title" data-i18n="console.title">Inference Log</span>
                                 </div>
                                 <div class="console-log-body" id="console-log-body">
                                 </div>
@@ -193,9 +176,7 @@
                             </div>
                         </div>
 
-                        <!-- Editor Pane (Chứa Code Editor) -->
                         <div class="editor-pane">
-                            <!-- Empty State -->
                             <div id="empty-state" class="empty-state">
                                 <div class="empty-icon-wrapper">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48"
@@ -205,16 +186,13 @@
                                         <polyline points="8 6 2 12 8 18"></polyline>
                                     </svg>
                                 </div>
-                                <p>Kết quả code Java hoàn thiện sẽ hiển thị tại đây</p>
-                                <span class="subtext">Chọn hoặc nhập yêu cầu ở cột bên trái và bấm nút "Bắt đầu sinh mã
-                                    Java".</span>
+                                <p data-i18n="empty.title">Completed Java code will appear here</p>
+                                <span class="subtext" data-i18n="empty.subtext">Choose or enter a request on the left, then click "Generate Java Code".</span>
                             </div>
 
-                            <!-- Code Content -->
                             <div id="code-editor" class="hidden"></div>
                         </div>
 
-                        <!-- Test Runner / Playground Section -->
                         <div class="test-runner-pane hidden" id="test-runner-section">
                             <div class="runner-header">
                                 <div class="runner-title">
@@ -222,11 +200,11 @@
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
                                     </svg>
-                                    <span>RUN</span>
+                                    <span data-i18n="runner.title">RUN</span>
                                 </div>
                                 <div class="runner-actions">
                                     <button id="btn-run-code" class="btn-run">
-                                        <span class="run-btn-text">Chạy hàm</span>
+                                        <span class="run-btn-text" data-i18n="btn.run">Run function</span>
                                         <span class="run-spinner hidden"></span>
                                     </button>
                                 </div>
@@ -234,22 +212,21 @@
                             <div class="runner-body">
                                 <div class="runner-input-group">
                                     <div class="input-header">
-                                        <label for="test-input-args">Arguments:</label>
-                                        <span class="helper-badge" id="test-input-helper">Ví dụ: (1, 2)</span>
+                                        <label for="test-input-args" data-i18n="label.arguments">Arguments:</label>
+                                        <span class="helper-badge" id="test-input-helper" data-i18n="helper.default">Example: (1, 2)</span>
                                     </div>
                                     <input type="text" id="test-input-args"
-                                        placeholder="Nhập các đối số truyền vào hàm, ví dụ: 1, 2 hoặc (1, 2)">
-                                    <!-- Parameter Hints: hiển thị kiểu tham số phân tích được -->
+                                        data-i18n-placeholder="args.placeholder"
+                                        placeholder="Enter function arguments, e.g. 1, 2 or (1, 2)">
                                     <div id="param-hints" class="param-hints hidden">
-                                        <span class="param-hints-label">Tham số:</span>
+                                        <span class="param-hints-label" data-i18n="label.params">Parameters:</span>
                                         <div id="param-hints-chips" class="param-hints-chips"></div>
                                     </div>
                                 </div>
                                 <div class="runner-output-group">
-                                    <label>Output:</label>
+                                    <label data-i18n="label.output">Output:</label>
                                     <div class="console-box" id="console-output">
-                                        <span class="console-placeholder">Nhập đối số đầu vào ở trên và nhấn "Chạy hàm"
-                                            để xem kết quả tính toán.</span>
+                                        <span class="console-placeholder" data-i18n="console.placeholder">Enter arguments above and click "Run function" to see the result.</span>
                                     </div>
                                 </div>
                             </div>
@@ -260,7 +237,7 @@
         </main>
     </div>
 
-    <!-- Modal Preview Bản Code Hoàn Chỉnh Trước Khi Tải Xuống -->
+    <!-- Preview Modal -->
     <div id="preview-modal" class="modal-overlay hidden">
         <div class="modal-card">
             <div class="modal-header">
@@ -276,11 +253,11 @@
                         </svg>
                     </div>
                     <div>
-                        <h3>Xem trước</h3>
+                        <h3 data-i18n="modal.preview">Preview</h3>
                     </div>
                 </div>
                 <div class="modal-header-actions">
-                    <button id="btn-close-modal" class="modal-close-btn" title="Đóng (Esc)">
+                    <button id="btn-close-modal" class="modal-close-btn" data-i18n-title="modal.close" title="Close (Esc)">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -305,7 +282,7 @@
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                         </svg>
-                        <span>Sao chép mã</span>
+                        <span data-i18n="modal.copy">Copy code</span>
                     </button>
                     <button id="btn-modal-download" class="btn-primary-small">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
@@ -314,7 +291,7 @@
                             <polyline points="7 10 12 15 17 10"></polyline>
                             <line x1="12" y1="15" x2="12" y2="3"></line>
                         </svg>
-                        <span>Tải xuống file .java</span>
+                        <span data-i18n="modal.download">Download .java file</span>
                     </button>
                 </div>
             </div>
@@ -325,6 +302,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
     <!-- Ace Editor -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
+    <script src="/static/js/i18n.js"></script>
     <script src="/static/js/main.js"></script>
 </body>
 

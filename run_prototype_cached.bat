@@ -1,7 +1,8 @@
 @echo off
-title AJAC: Automatic Java Code Generator
+title AJAC: Automatic Java Code Generator (Cached HF)
 echo ==================================================
 echo   Khoi chay AJAC: Automatic Java Code Generator
+echo   Cache: D:/cache/huggingface (da co CodeLlama)
 echo ==================================================
 
 :: Kiem tra virtual environment 'env'
@@ -27,12 +28,12 @@ echo Dang khoi dong Web Server tren http://127.0.0.1:5000...
 echo Trinh duyet se tu dong mo trong 2 giay...
 start "" cmd /c "timeout /t 2 /nobreak >nul & start http://127.0.0.1:5000"
 
-:: Hugging Face / Torch cache (tránh ghi vào C:\)
-set HF_HOME=D:/Temp/.cache/huggingface
-set HUGGINGFACE_HUB_CACHE=D:\Temp\.cache\huggingface
-set TRANSFORMERS_CACHE=D:/Temp/.cache/huggingface
-set HF_HUB_CACHE=D:/Temp/.cache/huggingface/hub
-set TORCH_HOME=D:/Temp/.cache/torch
+:: Hugging Face / Torch cache — dung ban CodeLlama da co san
+set HF_HOME=D:/cache/huggingface
+set HUGGINGFACE_HUB_CACHE=D:\cache\huggingface
+set TRANSFORMERS_CACHE=D:/cache/huggingface
+set HF_HUB_CACHE=D:/cache/huggingface/hub
+set TORCH_HOME=D:/cache/torch
 set TEMP=D:\Temp
 set TMP=D:\Temp
 

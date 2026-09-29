@@ -13,7 +13,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 # Phân tích tham số dòng lệnh trước để tránh import thư viện nặng nếu chạy Mock
-parser = argparse.ArgumentParser(description="Java Code Generator Prototype Server")
+parser = argparse.ArgumentParser(description="AJAC: Automatic Java Code Generator")
 parser.add_argument("--mock", action="store_true", help="Chạy server ở chế độ giả lập không load model")
 args, unknown = parser.parse_known_args()
 
@@ -24,8 +24,10 @@ from flask import Flask, request, jsonify, render_template, Response
 
 try:
     from prototype.prompt_enhancer import enhance_prompt, STANDARD_IMPORTS_HEADER
+    from prototype.i18n import t as i18n_t, resolve_lang
 except ImportError:
     from prompt_enhancer import enhance_prompt, STANDARD_IMPORTS_HEADER
+    from i18n import t as i18n_t, resolve_lang
 
 # Hàm load file .env thủ công nếu có
 def _load_env(path: Path) -> None:
@@ -59,16 +61,20 @@ BASE_MODEL = "codellama/CodeLlama-7b-hf"
 LORA_PATH = str((_REPO_ROOT / "models" / "java-codellama-lora" / "evol_completion_bo_v2").resolve())
 
 CACHE_DIR = os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
+MAX_NEW_TOKENS = 1024
+DEFAULT_TEMPERATURE = 0.2  # Chế độ Cân bằng
 
 # Biến lưu trữ model & tokenizer
 model = None
 tokenizer = None
 device = "cpu"
-model_status = "unloaded"
+# Stable status keys: unloaded | loading | ready | ready_mock | error
+model_status_key = "unloaded"
+model_status_error = ""
 
 if MOCK_MODE:
     device = "CPU (Mock Mode)"
-    model_status = "Sẵn sàng (Mock Mode)"
+    model_status_key = "ready_mock"
     print("==================================================")
     print("   RUNNING UI PROTOTYPE IN MOCK MODE              ")
     print("   (No model weights loaded, instant startup)      ")
@@ -80,15 +86,21 @@ else:
     from peft import PeftModel
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
+def _localized_status(lang: str) -> str:
+    if model_status_key == "error":
+        return i18n_t(lang, "status.error", error=model_status_error or "")
+    return i18n_t(lang, f"status.{model_status_key}")
+
 def init_model():
-    global model, tokenizer, model_status
+    global model, tokenizer, model_status_key, model_status_error
     if MOCK_MODE:
         print("Mock model mode initialized successfully.")
         return
         
     try:
-        model_status = "Dang tai mo hinh..."
-        print(f"[{model_status}] Target device: {device}")
+        model_status_key = "loading"
+        model_status_error = ""
+        print(f"[loading] Target device: {device}")
         
         tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, cache_dir=CACHE_DIR)
         
@@ -123,10 +135,12 @@ def init_model():
             model = base_model
             
         model.eval()
-        model_status = "Sẵn sàng"
+        model_status_key = "ready"
+        model_status_error = ""
         print("Model loaded successfully. Ready for inference.")
     except Exception as e:
-        model_status = f"Lỗi khi tải mô hình: {str(e)}"
+        model_status_key = "error"
+        model_status_error = str(e)
         print(f"Error: {e}")
 
 # Các chuỗi dừng mặc định
@@ -167,8 +181,10 @@ def index():
 
 @app.route("/api/status", methods=["GET"])
 def get_status():
+    lang = resolve_lang()
     return jsonify({
-        "status": model_status,
+        "status": _localized_status(lang),
+        "status_key": model_status_key,
         "device": device,
         "base_model": BASE_MODEL if not MOCK_MODE else f"{BASE_MODEL} (Simulated)",
         "lora_path": LORA_PATH if not MOCK_MODE else f"{LORA_PATH} (Simulated)"
@@ -200,23 +216,24 @@ def generate():
     
     data = request.get_json() or {}
     prompt = data.get("prompt", "")
-    temperature = float(data.get("temperature", 0.2))
-    max_new_tokens = int(data.get("max_new_tokens", 512))
+    temperature = DEFAULT_TEMPERATURE
+    max_new_tokens = MAX_NEW_TOKENS
     enable_lang = bool(data.get("enable_language_tag", False))
     enable_cot = bool(data.get("enable_cot", False))
     input_args = data.get("input_args", "")
+    lang = resolve_lang(data)
     
     if not prompt:
-        return jsonify({"error": "Prompt khong duoc de trong."}), 400
+        return jsonify({"error": i18n_t(lang, "error.empty_prompt")}), 400
 
     def generate_stream():
         try:
             # 1. Khởi tạo yêu cầu sinh mã
-            yield json.dumps({"step": "init", "text": "> Khởi tạo yêu cầu sinh mã", "type": "task"}) + "\n"
-            yield json.dumps({"step": "params", "text": f"Đang nạp tham số cấu hình suy luận", "type": "normal"}) + "\n"
+            yield json.dumps({"step": "init", "text": i18n_t(lang, "gen.init"), "type": "task"}) + "\n"
+            yield json.dumps({"step": "params", "text": i18n_t(lang, "gen.params"), "type": "normal"}) + "\n"
             
             # 2. Áp dụng quy tắc Prompt Engineering
-            yield json.dumps({"step": "enhance_start", "text": "> Áp dụng quy tắc Prompt Engineering", "type": "task"}) + "\n"
+            yield json.dumps({"step": "enhance_start", "text": i18n_t(lang, "gen.enhance_start"), "type": "task"}) + "\n"
             
             start_time = time.time()
             enhancement = enhance_prompt(
@@ -228,12 +245,12 @@ def generate():
             input_type = enhancement["input_type"]
             
             input_type_map = {
-                "NL": "Ngôn ngữ tự nhiên (Natural Language)",
-                "METHOD_ONLY": "Chữ ký hàm (Method signature)",
-                "FULL_JAVA": "Mã nguồn Java đầy đủ (Full Java class)"
+                "NL": i18n_t(lang, "gen.input_type_nl"),
+                "METHOD_ONLY": i18n_t(lang, "gen.input_type_method"),
+                "FULL_JAVA": i18n_t(lang, "gen.input_type_full"),
             }
             friendly_input_type = input_type_map.get(input_type, input_type)
-            yield json.dumps({"step": "enhance_info", "text": f"Định dạng đầu vào phát hiện: {friendly_input_type}.", "type": "normal"}) + "\n"
+            yield json.dumps({"step": "enhance_info", "text": i18n_t(lang, "gen.enhance_info", input_type=friendly_input_type), "type": "normal"}) + "\n"
             
             rules_applied = ["RULE-JAVA-DECL-NO-DOC", "RULE-CLEAR-SYNTAX-OUTPUT", "RULE-REPEAT-INSTR-AT-END"]
             if enable_lang:
@@ -243,57 +260,32 @@ def generate():
             if input_type in ("NL", "METHOD_ONLY"):
                 rules_applied.append("RULE-INCL-INSTR")
                 
-            yield json.dumps({"step": "enhance_rules", "text": f"Đã áp dụng thành công các quy tắc tối ưu hóa: {', '.join(rules_applied)}.", "type": "normal"}) + "\n"
+            yield json.dumps({"step": "enhance_rules", "text": i18n_t(lang, "gen.enhance_rules", rules=", ".join(rules_applied)), "type": "normal"}) + "\n"
             
             # 3. Kết nối máy chủ AI
-            yield json.dumps({"step": "model_start", "text": "> Kết nối máy chủ AI", "type": "task"}) + "\n"
+            yield json.dumps({"step": "model_start", "text": i18n_t(lang, "gen.model_start"), "type": "task"}) + "\n"
             
             # 4. Tiến trình suy luận sinh mã
-            yield json.dumps({"step": "inference_start", "text": "> Tiến trình suy luận sinh mã", "type": "task"}) + "\n"
+            yield json.dumps({"step": "inference_start", "text": i18n_t(lang, "gen.inference_start"), "type": "task"}) + "\n"
             
             cleaned_code = ""
             gen_text = ""
             
             if MOCK_MODE:
                 time.sleep(0.3)
-                yield json.dumps({"step": "inference_progress_1", "text": "[10%] Bắt đầu phân rã bài toán và sinh chuỗi token...", "type": "normal"}) + "\n"
+                yield json.dumps({"step": "inference_progress_1", "text": i18n_t(lang, "gen.progress_1"), "type": "normal"}) + "\n"
                 time.sleep(0.3)
-                yield json.dumps({"step": "inference_progress_2", "text": "[35%] Phân tích logic giải thuật bài toán...", "type": "normal"}) + "\n"
+                yield json.dumps({"step": "inference_progress_2", "text": i18n_t(lang, "gen.progress_2"), "type": "normal"}) + "\n"
                 time.sleep(0.3)
-                yield json.dumps({"step": "inference_progress_3", "text": "[60%] Rà soát lỗi cú pháp Java sơ bộ...", "type": "normal"}) + "\n"
+                yield json.dumps({"step": "inference_progress_3", "text": i18n_t(lang, "gen.progress_3"), "type": "normal"}) + "\n"
                 time.sleep(0.3)
-                yield json.dumps({"step": "inference_progress_4", "text": "[85%] Định dạng hoàn chỉnh cấu trúc class...", "type": "normal"}) + "\n"
+                yield json.dumps({"step": "inference_progress_4", "text": i18n_t(lang, "gen.progress_4"), "type": "normal"}) + "\n"
                 
                 cleaned_code = ""
                 prompt_lower = prompt.lower()
                 
                 # Nhận diện các bài toán phổ biến trong Mock mode
-                if "rollingmax" in prompt_lower or "rolling max" in prompt_lower:
-                    if input_type == "NL":
-                        cleaned_code = """List<Integer> rollingMax(List<Integer> numbers) {
-        List<Integer> result = new ArrayList<>();
-        if (numbers.isEmpty()) return result;
-        int max = numbers.get(0);
-        for (int n : numbers) {
-            max = Math.max(max, n);
-            result.add(max);
-        }
-        return result;
-    }
-}"""
-                    else:
-                        cleaned_code = """
-        List<Integer> result = new ArrayList<>();
-        if (numbers.isEmpty()) return result;
-        int max = numbers.get(0);
-        for (int n : numbers) {
-            max = Math.max(max, n);
-            result.add(max);
-        }
-        return result;
-    }
-}"""
-                elif "removeduplicates" in prompt_lower or "remove duplicates" in prompt_lower:
+                if "removeduplicates" in prompt_lower or "remove duplicates" in prompt_lower:
                     if input_type == "NL":
                         cleaned_code = """List<Integer> removeDuplicates(List<Integer> numbers) {
         List<Integer> result = new ArrayList<>();
@@ -324,35 +316,15 @@ def generate():
         return result;
     }
 }"""
-                elif "sorteven" in prompt_lower or "sort even" in prompt_lower or "chẵn" in prompt_lower:
+                elif "rightangletriangle" in prompt_lower or "right angle triangle" in prompt_lower or "right triangle" in prompt_lower:
                     if input_type == "NL":
-                        cleaned_code = """List<Integer> sortEven(List<Integer> l) {
-        List<Integer> evens = new ArrayList<>();
-        for (int i = 0; i < l.size(); i += 2) {
-            evens.add(l.get(i));
-        }
-        Collections.sort(evens);
-        List<Integer> result = new ArrayList<>(l);
-        int evenIdx = 0;
-        for (int i = 0; i < result.size(); i += 2) {
-            result.set(i, evens.get(evenIdx++));
-        }
-        return result;
+                        cleaned_code = """boolean rightAngleTriangle(int a, int b, int c) {
+        return a * a + b * b == c * c || a * a + c * c == b * b || b * b + c * c == a * a;
     }
 }"""
                     else:
                         cleaned_code = """
-        List<Integer> evens = new ArrayList<>();
-        for (int i = 0; i < l.size(); i += 2) {
-            evens.add(l.get(i));
-        }
-        Collections.sort(evens);
-        List<Integer> result = new ArrayList<>(l);
-        int evenIdx = 0;
-        for (int i = 0; i < result.size(); i += 2) {
-            result.set(i, evens.get(evenIdx++));
-        }
-        return result;
+        return a * a + b * b == c * c || a * a + c * c == b * b || b * b + c * c == a * a;
     }
 }"""
                 elif "willitfly" in prompt_lower or "will it fly" in prompt_lower:
@@ -459,15 +431,15 @@ def generate():
     }
 }"""
                 
-                yield json.dumps({"step": "inference_progress_5", "text": "[95%] Streaming code tokens into output buffer...", "type": "normal"}) + "\n"
+                yield json.dumps({"step": "inference_progress_5", "text": i18n_t(lang, "gen.progress_5"), "type": "normal"}) + "\n"
                 time.sleep(0.1)
                 gen_text = cleaned_code
                 elapsed = time.time() - start_time
                 time_taken_str = f"{elapsed:.2f}s (Simulated)"
             else:
-                yield json.dumps({"step": "inference_progress", "text": "Đang thực hiện suy luận trên mô hình... Vui lòng đợi.", "type": "normal"}) + "\n"
+                yield json.dumps({"step": "inference_progress", "text": i18n_t(lang, "gen.inference_wait"), "type": "normal"}) + "\n"
                 if model is None or tokenizer is None:
-                    raise ValueError("Mô hình chưa được tải lên hệ thống.")
+                    raise ValueError(i18n_t(lang, "error.model_not_loaded"))
                     
                 inputs = tokenizer(final_prompt, return_tensors="pt").to(model.device)
                 input_length = inputs.input_ids.shape[1]
@@ -499,8 +471,8 @@ def generate():
                 time_taken_str = f"{elapsed:.2f}s"
                 
             # 5. Xác thực biên dịch tự động
-            yield json.dumps({"step": "compile_start", "text": "> Biên dịch & Kiểm thử tự động", "type": "task"}) + "\n"
-            yield json.dumps({"step": "compile_info", "text": "Đang tiến hành biên dịch thử file Problem.java bằng javac...", "type": "normal"}) + "\n"
+            yield json.dumps({"step": "compile_start", "text": i18n_t(lang, "gen.compile_start"), "type": "task"}) + "\n"
+            yield json.dumps({"step": "compile_info", "text": i18n_t(lang, "gen.compile_info"), "type": "normal"}) + "\n"
             
             res_full = build_full_test_code(final_prompt + cleaned_code, input_args)
             full_code = res_full["full_code"]
@@ -557,16 +529,16 @@ def generate():
                     pass
             
             if compile_success:
-                yield json.dumps({"step": "compile_success", "text": "Biên dịch thử nghiệm Problem.java... THÀNH CÔNG.", "type": "normal"}) + "\n"
-                yield json.dumps({"step": "build_finished", "text": f"BUILD SUCCESSFUL trong {time_taken_str}", "type": "success"}) + "\n"
+                yield json.dumps({"step": "compile_success", "text": i18n_t(lang, "gen.compile_success"), "type": "normal"}) + "\n"
+                yield json.dumps({"step": "build_finished", "text": i18n_t(lang, "gen.build_ok", time=time_taken_str), "type": "success"}) + "\n"
             else:
                 # Trích xuất 5 dòng lỗi đầu tiên để hiển thị trực tiếp cho gọn gàng
                 err_lines = compile_output_msg.splitlines()
                 summary_err = "\n".join(err_lines[:5])
                 if len(err_lines) > 5:
-                    summary_err += f"\n... (và {len(err_lines) - 5} dòng lỗi khác)"
-                yield json.dumps({"step": "compile_fail", "text": f"Cảnh báo biên dịch: Có lỗi cú pháp trong mã nguồn sinh ra!\n{summary_err}", "type": "error"}) + "\n"
-                yield json.dumps({"step": "build_finished", "text": "BUILD SUCCESSFUL (với cảnh báo lỗi cú pháp)", "type": "warning"}) + "\n"
+                    summary_err += "\n" + i18n_t(lang, "gen.more_errors", n=len(err_lines) - 5)
+                yield json.dumps({"step": "compile_fail", "text": i18n_t(lang, "gen.compile_warn", summary=summary_err), "type": "error"}) + "\n"
+                yield json.dumps({"step": "build_finished", "text": i18n_t(lang, "gen.build_warn"), "type": "warning"}) + "\n"
                 
             # 6. Trả về payload kết quả cuối cùng ở chunk cuối
             yield json.dumps({
@@ -580,7 +552,7 @@ def generate():
             }) + "\n"
             
         except Exception as e:
-            yield json.dumps({"step": "error", "text": f"Lỗi hệ thống trong quá trình sinh mã: {str(e)}", "type": "error"}) + "\n"
+            yield json.dumps({"step": "error", "text": i18n_t(lang, "error.generate_failed", error=str(e)), "type": "error"}) + "\n"
 
     return Response(generate_stream(), mimetype="application/x-ndjson", headers={
         "Cache-Control": "no-cache",
@@ -828,9 +800,10 @@ def suggest_input():
     """API phân tích mã sinh ra và gợi ý input test phù hợp."""
     data = request.get_json() or {}
     code = data.get("code", "")
+    lang = resolve_lang(data)
     
     if not code:
-        return jsonify({"error": "Mã nguồn không được để trống."}), 400
+        return jsonify({"error": i18n_t(lang, "error.empty_code")}), 400
     
     sig = parse_method_signature(code)
     if not sig:
@@ -1093,14 +1066,15 @@ def run_code():
     data = request.get_json() or {}
     code = data.get("code", "")
     input_args = data.get("input_args", "")
+    lang = resolve_lang(data)
     
     if not code:
-        return jsonify({"error": "Mã nguồn không được để trống."}), 400
+        return jsonify({"error": i18n_t(lang, "error.empty_code")}), 400
         
     # Phân tích signature hàm
     sig = parse_method_signature(code)
     if not sig:
-        return jsonify({"error": "Không tìm thấy hàm 'public static' nào trong mã nguồn để thực thi."}), 400
+        return jsonify({"error": i18n_t(lang, "error.no_static_method")}), 400
         
     ret_type = sig["return_type"]
     method_name = sig["method_name"]
@@ -1251,13 +1225,13 @@ public class TestRunner {{
         return jsonify({
             "success": False,
             "stage": "timeout",
-            "output": "Lỗi thực thi: Quá thời gian quy định (Timeout 10s)."
+            "output": i18n_t(lang, "error.run_timeout")
         })
     except Exception as e:
         return jsonify({
             "success": False,
             "stage": "system",
-            "output": f"Lỗi hệ thống khi chạy thử mã: {str(e)}"
+            "output": i18n_t(lang, "error.run_system", error=str(e))
         }), 500
     finally:
         try:

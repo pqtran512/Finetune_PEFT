@@ -1,4 +1,4 @@
-"""Module Prompt Enhancer & Normalizer cho Java Code Generator Prototype.
+"""Module Prompt Enhancer & Normalizer cho AJAC: Automatic Java Code Generator.
 
 Hiện thực hóa 6 quy tắc Prompt Engineering từ Báo cáo Chuyên đề ND4:
 - RULE-INCL-INSTR (Quy tắc 1): Đóng gói mô tả vào Javadoc comment chuẩn.

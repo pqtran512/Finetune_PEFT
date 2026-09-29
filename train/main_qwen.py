@@ -61,17 +61,19 @@ def main():
         target_ids = tokenizer(
             ex["target"] + tokenizer.eos_token, add_special_tokens=False
         )["input_ids"]
+
         if len(prefix_ids) + len(target_ids) > MAX_LENGTH:
             return {"input_ids": [], "attention_mask": [], "labels": []}
         input_ids = prefix_ids + target_ids
         labels = [-100] * len(prefix_ids) + target_ids
+
         return {
             "input_ids": input_ids,
             "attention_mask": [1] * len(input_ids),
             "labels": labels,
         }
 
-    # Train/eval split trước khi tokenize để giữ raw fields debug nếu cần
+    # Train/eval split trước khi tokenize để giữ raw fields để debug
     split = dataset.train_test_split(test_size=0.02, seed=42)
     train_raw = split["train"]
     eval_raw = split["test"]

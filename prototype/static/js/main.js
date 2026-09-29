@@ -319,12 +319,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!logBody) return;
         const line = document.createElement("div");
         line.className = `console-log-line ${style}`;
-        
+
         if (style === "error") {
             line.style.whiteSpace = "pre-wrap";
             line.style.fontFamily = "var(--font-mono)";
         }
-        
+
         line.textContent = text;
         logBody.appendChild(line);
         logBody.scrollTop = logBody.scrollHeight;
@@ -333,7 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateProgressBar(step) {
         const progressFill = document.getElementById("progress-bar-fill");
         if (!progressFill) return;
-        
+
         let percent = 0;
         switch (step) {
             case "init": percent = 5; break;
@@ -440,8 +440,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     codeContainer.classList.remove("hidden");
 
                     // Lấy code hoàn chỉnh từ backend (không bao gồm hàm main kiểm thử trong editor)
-                    let fullCode = finalResult.enhanced_prompt 
-                        ? (finalResult.enhanced_prompt + finalResult.generated_code) 
+                    let fullCode = finalResult.enhanced_prompt
+                        ? (finalResult.enhanced_prompt + finalResult.generated_code)
                         : (finalResult.full_code || finalResult.generated_code);
                     if (!finalResult.enhanced_prompt) {
                         if (!fullCode.includes("class Problem") && !fullCode.startsWith(prompt)) {
@@ -471,7 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             addLogLine("> Lỗi kết nối / Hệ thống", "task");
             addLogLine("Quá trình sinh mã thất bại: " + err.message, "error");
-            
+
             setTimeout(() => {
                 loadingOverlay.classList.add("hidden");
                 btnGenerate.disabled = false;

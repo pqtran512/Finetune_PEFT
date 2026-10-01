@@ -14,6 +14,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from shared.directives import apply_directive, STOP_STRINGS
+from shared.repair import repair_completions
+from shared.runner import evaluate_jsonl
 
 
 def _load_env(path: Path) -> None:
@@ -58,6 +60,11 @@ def main():
         help="Chèn Prompt Directive vào đầu prompt trước khi sinh mã",
     )
     parser.add_argument(
+        "--with-repair",
+        action="store_true",
+        help="Tự động chạy đánh giá vòng 1 và thực hiện Repair Pass cho các bài COMPILE_ERROR",
+    )
+    parser.add_argument(
         "--max-new-tokens",
         type=int,
         default=512,
@@ -85,10 +92,11 @@ def main():
     cache_dir = os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
 
     print("=" * 60)
-    print("HF_HOME / cache:", cache_dir)
-    print("Model path     :", model_path)
-    print("Output file    :", output_file)
+    print("HF_HOME / cache :", cache_dir)
+    print("Model path      :", model_path)
+    print("Output file     :", output_file)
     print("Prompt Directive:", "BẬT" if args.use_directive else "TẮT")
+    print("Repair Pass     :", "BẬT" if args.with_repair else "TẮT")
     print("=" * 60)
 
     # 1. Load Model & Tokenizer
@@ -111,15 +119,9 @@ def main():
         dataset = list(dataset)[: args.limit]
         print(f"Giới hạn chạy thử nghiệm: {len(dataset)} tasks.")
 
-    # 3. Chạy Inference
-    results = []
-    desc = f"Generating Java Code ({'Directive' if args.use_directive else 'Standard'})"
-    for item in tqdm(dataset, desc=desc):
-        prompt = item["prompt"]
-        input_prompt = apply_directive(prompt) if args.use_directive else prompt
-        inputs = tokenizer(input_prompt, return_tensors="pt").to(model.device)
+    def generate_fn(prompt_text: str) -> str:
+        inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
         input_len = inputs.input_ids.shape[1]
-
         with torch.no_grad():
             try:
                 outputs = model.generate(
@@ -139,15 +141,22 @@ def main():
                     do_sample=False,
                     pad_token_id=tokenizer.eos_token_id,
                 )
-
         gen_ids = outputs[0][input_len:]
-        generated_code = tokenizer.decode(gen_ids, skip_special_tokens=True)
+        return tokenizer.decode(gen_ids, skip_special_tokens=True)
+
+    # 3. Chạy Inference Vòng 1
+    results = []
+    desc = f"Generating Java Code ({'Directive' if args.use_directive else 'Standard'})"
+    for item in tqdm(dataset, desc=desc):
+        prompt = item["prompt"]
+        input_prompt = apply_directive(prompt) if args.use_directive else prompt
+        raw_code = generate_fn(input_prompt)
 
         results.append(
             {
                 "task_id": item["name"],
                 "prompt": prompt,
-                "completion": clean_output(generated_code),
+                "completion": clean_output(raw_code),
                 "tests": item["tests"],
             }
         )
@@ -158,9 +167,44 @@ def main():
         for entry in results:
             f.write(json.dumps(entry) + "\n")
 
-    print(f"\n✅ Đã hoàn tất! Kết quả đã lưu vào: {output_file}")
+    print(f"\n✅ Đã hoàn tất Inference Vòng 1! File đã lưu: {output_file}")
+
+    # 5. Nếu bật --with-repair: Tự động chạy evaluate pass 1 và repair
+    if args.with_repair:
+        print("\n" + "=" * 60)
+        print(">>> BẮT ĐẦU QUY TRÌNH REPAIR PASS (ĐÁNH GIÁ VÒNG 1)")
+        print("=" * 60)
+        eval1 = evaluate_jsonl(str(output_file), save_failures=True, verbose=True)
+        failures_path = eval1.get("failures_file")
+
+        suffix = output_file.suffix
+        repaired_file = output_file.parent / f"{output_file.stem}_repaired{suffix}"
+
+        if failures_path and Path(failures_path).exists():
+            print(f"\n>>> ĐANG CHẠY REPAIR BẰNG CODELLAMA CHO CÁC BÀI THIẾU HELPER...")
+            repair_completions(
+                input_path=str(output_file),
+                failures_path=str(failures_path),
+                output_path=str(repaired_file),
+                generate_fn=generate_fn,
+            )
+
+            print("\n" + "=" * 60)
+            print(">>> ĐÁNH GIÁ CUỐI CÙNG SAU REPAIR PASS (VÒNG 2)")
+            print("=" * 60)
+            eval2 = evaluate_jsonl(str(repaired_file), save_failures=False, verbose=True)
+
+            print("=" * 60)
+            print(f"📊 BẢNG TỔNG KẾT REPAIR PASS:")
+            print(f" - Trước repair (Vòng 1): {eval1['pass_rate']:.2f}% ({eval1['passed']}/{eval1['total']})")
+            print(f" - Sau repair   (Vòng 2): {eval2['pass_rate']:.2f}% ({eval2['passed']}/{eval2['total']})")
+            print(f" - File kết quả cuối    : {repaired_file}")
+            print("=" * 60)
+        else:
+            print("Không tìm thấy file failures hoặc không có lỗi biên dịch cần sửa.")
 
 
 if __name__ == "__main__":
     main()
+
 

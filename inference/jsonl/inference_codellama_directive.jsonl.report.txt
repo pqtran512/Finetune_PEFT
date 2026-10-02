@@ -1,0 +1,218 @@
+pass@1: 81.65% (129/158)
+
+Breakdown:
+  COMPILE_ERROR: 29 (18.4%)
+  PASSED: 129 (81.6%)
+
+Failures (task_id | status | stderr[:300]):
+HumanEval_17_parse_music | COMPILE_ERROR | Problem.java:26: error: duplicate case label
+                case 'o':
+                ^
+1 error
+
+HumanEval_37_sort_even | COMPILE_ERROR | Problem.java:20: error: no suitable method found for sort(ArrayList<Long>,int,int)
+            Collections.sort(lPrime, i, i + 1);
+                       ^
+    method Collections.<T#1>sort(List<T#1>) is not applicable
+      (cannot infer type-variable(s) T#1
+        (actual and formal argument lists
+
+HumanEval_39_prime_fib | COMPILE_ERROR | Problem.java:26: error: incompatible types: possible lossy conversion from long to int
+        long[] fib = new long[n];
+                              ^
+Problem.java:35: error: cannot find symbol
+            if (isPrime(fib[i])) {
+                ^
+  symbol:   method isPrime(long)
+  location: class
+
+HumanEval_41_car_race_collision | COMPILE_ERROR | Problem.java:19: error: incompatible types: possible lossy conversion from long to int
+long[] leftToRight = new long[n];
+                              ^
+Problem.java:20: error: incompatible types: possible lossy conversion from long to int
+        long[] rightToLeft = new long[n];
+
+HumanEval_65_circular_shift | COMPILE_ERROR | Problem.java:32: error: incompatible types: possible lossy conversion from long to int
+        return sb.reverse().toString().substring(shift) + sb.reverse().toString().substring(0, shift);
+                                                 ^
+Problem.java:32: error: incompatible types: possible lossy
+
+HumanEval_72_will_it_fly | COMPILE_ERROR | Problem.java:35: error: cannot find symbol
+        return sum <= w && isPalindrome(q);
+                           ^
+  symbol:   method isPalindrome(ArrayList<Long>)
+  location: class Problem
+1 error
+
+HumanEval_78_hex_key | COMPILE_ERROR | Problem.java:38: error: cannot find symbol
+            if (isPrime(c)) {
+                ^
+  symbol:   method isPrime(char)
+  location: class Problem
+1 error
+
+HumanEval_87_get_row | COMPILE_ERROR | Problem.java:31: error: incompatible types: inference variable A has incompatible bounds
+                    pairs.add(Pair.with(i, j));
+                         ^
+    equality constraints: Long
+    lower bounds: Integer
+  where A,B are type-variables:
+    A extends Object declared in method <A,B>wi
+
+HumanEval_88_sort_array | COMPILE_ERROR | Problem.java:29: error: incompatible types: Long cannot be converted to int
+        int sum = (int) array.get(0) + (int) array.get(array.size() - 1);
+                                 ^
+Problem.java:29: error: incompatible types: Long cannot be converted to int
+        int sum = (int) array.get(0) +
+
+HumanEval_93_encode | COMPILE_ERROR | Problem.java:37: error: cannot find symbol
+            if (isVowel(c)) {
+                ^
+  symbol:   method isVowel(char)
+  location: class Problem
+Problem.java:38: error: cannot find symbol
+                int index = getVowelIndex(c);
+                            ^
+  symbol:   method getVowelInde
+
+HumanEval_94_skjkasdkd | COMPILE_ERROR | Problem.java:28: error: cannot find symbol
+            if (isPrime(num)) {
+                ^
+  symbol:   method isPrime(long)
+  location: class Problem
+Problem.java:32: error: cannot find symbol
+        return sumOfDigits(maxPrime);
+               ^
+  symbol:   method sumOfDigits(long)
+  location: c
+
+HumanEval_96_count_up_to | COMPILE_ERROR | Problem.java:28: error: cannot find symbol
+            if (isPrime(i)) {
+                ^
+  symbol:   method isPrime(long)
+  location: class Problem
+1 error
+
+HumanEval_105_by_length | COMPILE_ERROR | Problem.java:32: error: cannot find symbol
+            result.set(i, getName(Integer.parseInt(result.get(i))));
+                          ^
+  symbol:   method getName(int)
+  location: class Problem
+1 error
+
+HumanEval_106_f | COMPILE_ERROR | Problem.java:22: error: cannot find symbol
+                result.add((long)factorial(i));
+                                 ^
+  symbol:   method factorial(long)
+  location: class Problem
+1 error
+
+HumanEval_107_even_odd_palindrome | COMPILE_ERROR | Problem.java:29: error: cannot find symbol
+            if (isPalindrome(i)) {
+                ^
+  symbol:   method isPalindrome(long)
+  location: class Problem
+1 error
+
+HumanEval_112_reverse_delete | COMPILE_ERROR | Problem.java:31: error: cannot find symbol
+        return Pair.with(result, isPalindrome(result));
+                                 ^
+  symbol:   method isPalindrome(String)
+  location: class Problem
+1 error
+
+HumanEval_115_max_fill | COMPILE_ERROR | Problem.java:33: error: incompatible types: possible lossy conversion from long to int
+        int[][] dp = new int[n + 1][capacity + 1];
+                                             ^
+Problem.java:51: error: incompatible types: possible lossy conversion from long to int
+        return dp[n][capacit
+
+HumanEval_116_sort_array | COMPILE_ERROR | Problem.java:21: error: cannot find symbol
+Collections.sort(arr, Comparator.comparingInt(BinaryHelper::countOnes).thenComparingLong(Function.identity()));
+                                              ^
+  symbol:   variable BinaryHelper
+  location: class Problem
+Problem.java:21: error: cannot find s
+
+HumanEval_117_select_words | COMPILE_ERROR | Problem.java:33: error: cannot find symbol
+            if (countConsonants(word) == n) {
+                ^
+  symbol:   method countConsonants(String)
+  location: class Problem
+1 error
+
+HumanEval_118_get_closest_vowel | COMPILE_ERROR | Problem.java:33: error: cannot find symbol
+            if (isVowel(c)) {
+                ^
+  symbol:   method isVowel(char)
+  location: class Problem
+Problem.java:38: error: cannot find symbol
+            } else if (!isConsonant(c)) {
+                        ^
+  symbol:   method isConsonant(char)
+
+HumanEval_119_match_parens | COMPILE_ERROR | Problem.java:26: error: cannot find symbol
+        int count1 = countParens(s1);
+                     ^
+  symbol:   method countParens(String)
+  location: class Problem
+Problem.java:27: error: cannot find symbol
+        int count2 = countParens(s2);
+                     ^
+  symbol:   method countPar
+
+HumanEval_123_get_odd_collatz | COMPILE_ERROR | Problem.java:35: error: incompatible types: int cannot be converted to Long
+        oddCollatz.add(1);
+                       ^
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+1 error
+
+HumanEval_127_intersection | COMPILE_ERROR | Problem.java:47: error: cannot find symbol
+        if (isPrime(length)) {
+            ^
+  symbol:   method isPrime(long)
+  location: class Problem
+1 error
+
+HumanEval_143_words_in_sentence | COMPILE_ERROR | Problem.java:28: error: cannot find symbol
+            if (isPrime(word.length())) {
+                ^
+  symbol:   method isPrime(int)
+  location: class Problem
+1 error
+
+HumanEval_145_order_by_points | COMPILE_ERROR | Problem.java:35: error: incompatible types: cannot infer type-variable(s) T
+        Collections.sort(points, Comparator.comparingInt(Pair::getValue1).thenComparing(Pair::getValue0));
+                                                        ^
+    (argument mismatch; invalid method reference
+      meth
+
+HumanEval_148_bf | COMPILE_ERROR | Problem.java:27: error: cannot find symbol
+if (!isValidPlanet(planet1) || !isValidPlanet(planet2)) {
+     ^
+  symbol:   method isValidPlanet(String)
+  location: class Problem
+Problem.java:27: error: cannot find symbol
+if (!isValidPlanet(planet1) || !isValidPlanet(planet2)) {
+
+HumanEval_150_x_or_y | COMPILE_ERROR | Problem.java:18: error: cannot find symbol
+if (isPrime(n)) {
+    ^
+  symbol:   method isPrime(long)
+  location: class Problem
+1 error
+
+HumanEval_158_find_max | COMPILE_ERROR | Problem.java:26: error: cannot find symbol
+        int maxUniqueChars = getUniqueCharsCount(maxWord);
+                             ^
+  symbol:   method getUniqueCharsCount(String)
+  location: class Problem
+Problem.java:29: error: cannot find symbol
+            int uniqueChars = getUniqueCharsCount(w
+
+HumanEval_159_eat | COMPILE_ERROR | Problem.java:43: error: incompatible types: int cannot be converted to Long
+            result.add(0);
+                       ^
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+1 error
+

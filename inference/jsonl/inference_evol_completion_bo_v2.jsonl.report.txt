@@ -1,0 +1,349 @@
+pass@1: 40.51% (64/158)
+
+Breakdown:
+  COMPILE_ERROR: 14 (8.9%)
+  FAILED: 79 (50.0%)
+  PASSED: 64 (40.5%)
+  TIMEOUT: 1 (0.6%)
+
+Failures (task_id | status | stderr[:300]):
+HumanEval_1_separate_paren_groups | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:33)
+
+HumanEval_6_parse_nested_parens | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:34)
+
+HumanEval_9_rolling_max | FAILED | Exception in thread "main" java.lang.IndexOutOfBoundsException: Index 0 out of bounds for length 0
+	at java.base/jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:100)
+	at java.base/jdk.internal.util.Preconditions.outOfBoundsCheckIndex(Preconditions.java:106)
+	at java.base/jdk.internal.
+
+HumanEval_10_make_palindrome | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:34)
+
+HumanEval_15_string_sequence | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:23)
+
+HumanEval_16_count_distinct_characters | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:33)
+
+HumanEval_17_parse_music | COMPILE_ERROR | Problem.java:26: error: duplicate case label
+                case 'o':
+                ^
+1 error
+
+HumanEval_18_how_many_times | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:37)
+
+HumanEval_19_sort_numbers | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:23)
+
+HumanEval_20_find_closest_elements | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:42)
+
+HumanEval_24_largest_divisor | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:26)
+
+HumanEval_26_remove_duplicates | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:24)
+
+HumanEval_33_sort_third | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:27)
+
+HumanEval_36_fizz_buzz | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_37_sort_even | COMPILE_ERROR | Problem.java:20: error: no suitable method found for sort(ArrayList<Long>,int,int)
+            Collections.sort(lPrime, i, i + 1);
+                       ^
+    method Collections.<T#1>sort(List<T#1>) is not applicable
+      (cannot infer type-variable(s) T#1
+        (actual and formal argument lists
+
+HumanEval_39_prime_fib | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:37)
+
+HumanEval_41_car_race_collision | COMPILE_ERROR | Problem.java:19: error: incompatible types: possible lossy conversion from long to int
+long[] dp = new long[n + 1];
+                       ^
+Problem.java:25: error: incompatible types: possible lossy conversion from long to int
+        return dp[n];
+                  ^
+2 errors
+
+HumanEval_43_pairs_sum_to_zero | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:35)
+
+HumanEval_46_fib4 | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:41)
+
+HumanEval_47_median | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:28)
+
+HumanEval_49_modp | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:26)
+
+HumanEval_54_same_chars | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:44)
+
+HumanEval_57_monotonic | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:36)
+
+HumanEval_63_fibfib | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:39)
+
+HumanEval_64_vowels_count | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_65_circular_shift | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_67_fruit_distribution | FAILED | Exception in thread "main" java.lang.NumberFormatException: For input string: "and"
+	at java.base/java.lang.NumberFormatException.forInputString(NumberFormatException.java:67)
+	at java.base/java.lang.Long.parseLong(Long.java:594)
+	at java.base/java.lang.Long.parseLong(Long.java:698)
+	at Problem.frui
+
+HumanEval_70_strange_sort_list | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:39)
+
+HumanEval_71_triangle_area | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:31)
+
+HumanEval_73_smallest_change | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:50)
+
+HumanEval_74_total_match | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:56)
+
+HumanEval_75_is_multiply_prime | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:57)
+
+HumanEval_76_is_simple_power | COMPILE_ERROR | Problem.java:55: error: ';' expected
+            return x == 1 || x == 10 || x == 100 || x == 10000 || x == 1000000 || x == 10
+                                                                                         ^
+Problem.java:57: error: illegal start of expression
+    public static void main(St
+
+HumanEval_77_iscube | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:33)
+
+HumanEval_78_hex_key | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:63)
+
+HumanEval_79_decimal_to_binary | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_80_is_happy | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:45)
+
+HumanEval_81_numerical_letter_grade | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:66)
+
+HumanEval_83_starts_one_ends | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:23)
+
+HumanEval_84_solve | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:32)
+
+HumanEval_85_add | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:23)
+
+HumanEval_87_get_row | COMPILE_ERROR | Problem.java:35: error: invalid method reference
+        pairs.sort(Comparator.comparingLong(Pair::getFirst).thenComparingLong(Pair::getSecond).reversed());
+                                            ^
+  cannot find symbol
+    symbol:   method getFirst()
+    location: class Pair
+Problem.java:35: er
+
+HumanEval_88_sort_array | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:41)
+
+HumanEval_89_encrypt | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:37)
+
+HumanEval_91_is_bored | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_92_any_int | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:32)
+
+HumanEval_93_encode | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:76)
+
+HumanEval_95_check_dict_case | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:51)
+
+HumanEval_96_count_up_to | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:51)
+
+HumanEval_97_multiply | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:32)
+
+HumanEval_99_closest_integer | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:37)
+
+HumanEval_100_make_a_pile | TIMEOUT | Timeout expired
+
+HumanEval_101_words_string | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:22)
+
+HumanEval_102_choose_num | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_104_unique_digits | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_105_by_length | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:37)
+
+HumanEval_107_even_odd_palindrome | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:50)
+
+HumanEval_108_count_nums | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:40)
+
+HumanEval_109_move_one_ball | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:63)
+
+HumanEval_110_exchange | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:43)
+
+HumanEval_111_histogram | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:38)
+
+HumanEval_113_odd_count | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:32)
+
+HumanEval_115_max_fill | COMPILE_ERROR | Problem.java:33: error: incompatible types: possible lossy conversion from long to int
+        long[][] dp = new long[n + 1][capacity + 1];
+                                               ^
+Problem.java:52: error: incompatible types: possible lossy conversion from long to int
+        return dp[n][cap
+
+HumanEval_116_sort_array | COMPILE_ERROR | Problem.java:21: error: cannot find symbol
+Collections.sort(arr, Comparator.comparingInt(BinarySort::countOnes).thenComparingLong(Long::longValue));
+                                              ^
+  symbol:   variable BinarySort
+  location: class Problem
+1 error
+
+HumanEval_118_get_closest_vowel | COMPILE_ERROR | Problem.java:54: error: cannot find symbol
+            if (isVowel(c)) {
+                ^
+  symbol:   method isVowel(char)
+  location: class Problem
+1 error
+
+HumanEval_119_match_parens | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:41)
+
+HumanEval_120_maximum | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:48)
+
+HumanEval_123_get_odd_collatz | COMPILE_ERROR | Problem.java:35: error: incompatible types: int cannot be converted to Long
+        oddCollatz.add(1);
+                       ^
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+1 error
+
+HumanEval_126_is_sorted | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:53)
+
+HumanEval_127_intersection | COMPILE_ERROR | Problem.java:30: error: cannot find symbol
+long start1 = interval1.getFirst();
+                       ^
+  symbol:   method getFirst()
+  location: variable interval1 of type Pair<Long,Long>
+Problem.java:31: error: cannot find symbol
+        long end1 = interval1.getSecond();
+
+HumanEval_128_prod_signs | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:39)
+
+HumanEval_129_minPath | COMPILE_ERROR | Problem.java:35: error: incompatible types: possible lossy conversion from long to int
+        ArrayList<Long>[][] dp = new ArrayList[n][n][k + 1];
+                                                       ^
+Problem.java:35: error: incompatible types: ArrayList[][][] cannot be converted to ArrayList<Lo
+
+HumanEval_130_tri | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:39)
+
+HumanEval_131_digits | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:37)
+
+HumanEval_132_is_nested | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:51)
+
+HumanEval_135_can_arrange | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:40)
+
+HumanEval_136_largest_smallest_integers | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:40)
+
+HumanEval_138_is_equal_to_sum_even | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:39)
+
+HumanEval_139_special_factorial | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:31)
+
+HumanEval_140_fix_spaces | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:42)
+
+HumanEval_141_file_name_check | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:49)
+
+HumanEval_144_simplify | COMPILE_ERROR | Problem.java:22: error: cannot find symbol
+Fraction fx = new Fraction(x);
+^
+  symbol:   class Fraction
+  location: class Problem
+Problem.java:22: error: cannot find symbol
+Fraction fx = new Fraction(x);
+                  ^
+  symbol:   class Fraction
+  location: class Problem
+Problem.java:23: error:
+
+HumanEval_145_order_by_points | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:38)
+
+HumanEval_146_specialFilter | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_147_get_max_triples | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:39)
+
+HumanEval_148_bf | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:52)
+
+HumanEval_149_sorted_list_sum | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:42)
+
+HumanEval_154_cycpattern_check | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:40)
+
+HumanEval_155_even_odd_count | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:39)
+
+HumanEval_156_int_to_mini_roman | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:37)
+
+HumanEval_159_eat | COMPILE_ERROR | Problem.java:43: error: incompatible types: int cannot be converted to Long
+            result.add(0);
+                       ^
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+1 error
+
+HumanEval_160_do_algebra | COMPILE_ERROR | Problem.java:45: error: incompatible types: possible lossy conversion from double to long
+                    result = Math.pow(result, operand.get(i));
+                                     ^
+1 error
+
+HumanEval_161_solve | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:40)
+
+HumanEval_163_generate_integers | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:29)
+

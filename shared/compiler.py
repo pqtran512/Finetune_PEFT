@@ -92,8 +92,9 @@ def compile_and_run_java(
         if cp.returncode != 0:
             return "COMPILE_ERROR", cp.stderr
 
-        # Run test
-        run_cmd = ["java", "-cp", classpath, "Problem"]
+        # -ea: HumanEval-Java dùng assert; không có cờ này thì assert bị bỏ qua
+        # và mọi bài biên dịch được đều tính PASSED.
+        run_cmd = ["java", "-ea", "-cp", classpath, "Problem"]
         rp = subprocess.run(
             run_cmd,
             cwd=str(working_dir),
@@ -125,3 +126,85 @@ def compile_and_run_java(
                 os.remove(f)
             except OSError:
                 pass
+
+
+def cleanup_problem_artifacts(working_dir: Path) -> None:
+    """Xóa Problem.java và các file .class sinh ra trong một thư mục tạm."""
+    java_file = working_dir / "Problem.java"
+    if java_file.exists():
+        try:
+            os.remove(java_file)
+        except OSError:
+            pass
+    for pattern in ("Problem.class", "Problem$*.class"):
+        for f in working_dir.glob(pattern):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+
+
+def compile_problem_source(
+    source: str,
+    jar_path: str,
+    working_dir: Path,
+    compile_timeout: int = 15,
+) -> tuple[str, str]:
+    """Ghi Problem.java và chạy javac. Không xóa artifact.
+
+    Returns:
+        ("OK", "") hoặc ("COMPILE_ERROR", stderr) hoặc ("TIMEOUT", message)
+    """
+    working_dir.mkdir(parents=True, exist_ok=True)
+    java_file = working_dir / "Problem.java"
+    java_file.write_text(source, encoding="utf-8")
+    classpath = f".{os.pathsep}{jar_path}"
+    compile_cmd = ["javac", "-encoding", "utf-8", "-cp", classpath, "Problem.java"]
+    try:
+        cp = subprocess.run(
+            compile_cmd,
+            cwd=str(working_dir),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=compile_timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return "TIMEOUT", "Timeout expired"
+    if cp.returncode != 0:
+        return "COMPILE_ERROR", cp.stderr or cp.stdout
+    return "OK", ""
+
+
+def run_problem_class(
+    jar_path: str,
+    working_dir: Path,
+    timeout: int = 5,
+    enable_assertions: bool = False,
+) -> tuple[str, str, str]:
+    """Chạy class Problem đã biên dịch.
+
+    Returns:
+        (status, stdout, stderr) với status PASSED, FAILED hoặc TIMEOUT.
+    """
+    classpath = f".{os.pathsep}{jar_path}"
+    run_cmd = ["java"]
+    if enable_assertions:
+        run_cmd.append("-ea")
+    run_cmd.extend(["-cp", classpath, "Problem"])
+    try:
+        rp = subprocess.run(
+            run_cmd,
+            cwd=str(working_dir),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return "TIMEOUT", "", "Timeout expired"
+    if rp.returncode == 0:
+        return "PASSED", rp.stdout or "", rp.stderr or ""
+    return "FAILED", rp.stdout or "", rp.stderr or ""

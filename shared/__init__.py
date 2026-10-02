@@ -24,6 +24,11 @@ from .repair import (
 from .runner import (
     evaluate_jsonl,
 )
+from .quality_metrics import (
+    compare_passed,
+    evaluate_records,
+    summarize_passed,
+)
 
 __all__ = [
     "PROMPT_DIRECTIVE",
@@ -39,4 +44,7 @@ __all__ = [
     "build_repair_prompt",
     "repair_completions",
     "evaluate_jsonl",
+    "compare_passed",
+    "evaluate_records",
+    "summarize_passed",
 ]

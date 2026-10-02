@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- HumanEval-Java keeps assertions in main. Those lines are the harness, not the generated method. -->
+    <Match>
+        <Class name="Problem"/>
+        <Method name="main"/>
+    </Match>
+</FindBugsFilter>

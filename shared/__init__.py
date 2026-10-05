@@ -2,7 +2,6 @@
 """
 
 from .directives import (
-    CODELLAMA_PROMPT_DIRECTIVE,
     PROMPT_DIRECTIVE,
     QWEN_PROMPT_DIRECTIVE,
     REPAIR_INSTRUCTION,
@@ -33,7 +32,6 @@ from .quality_metrics import (
 )
 
 __all__ = [
-    "CODELLAMA_PROMPT_DIRECTIVE",
     "PROMPT_DIRECTIVE",
     "QWEN_PROMPT_DIRECTIVE",
     "REPAIR_INSTRUCTION",

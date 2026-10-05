@@ -3,10 +3,7 @@
 
 # Directive được chèn vào trên đầu mỗi prompt dưới dạng comment Java.
 # Giữ ở dạng comment để mô hình coi như ngữ cảnh tự nhiên thay vì instruction tag.
-#
-# Cả CodeLlama và CodeQwen đều dừng tại "\n    }\n" (stop chuẩn của MultiPL-E,
-# đóng method). Rule "viết helper sau dấu }" vì thế không được sinh ra ở cả hai.
-# Directive CodeLlama bỏ rule đó và yêu cầu viết hết logic trong thân hàm.
+# CodeLlama và Qwen dùng chung một directive.
 PROMPT_DIRECTIVE = """// Implementation rules (must follow):
 // 1. The body must be self-contained. Do NOT call any method that you do not
 //    define in this same file.
@@ -19,13 +16,6 @@ PROMPT_DIRECTIVE = """// Implementation rules (must follow):
 """
 
 QWEN_PROMPT_DIRECTIVE = PROMPT_DIRECTIVE
-
-# Khớp với stop-at-method-close: mọi logic phải nằm trong thân hàm đang viết.
-CODELLAMA_PROMPT_DIRECTIVE = """// Implementation rules:
-// 1. Write the full logic inside this method. Do not call any method that is not already defined above this line.
-// 2. Use only java.util.*, java.util.stream.*, java.util.regex.*, java.lang.Math, and org.javatuples.Pair (getValue0()/getValue1()).
-// 3. Do not redeclare the class or main.
-"""
 
 REPAIR_INSTRUCTION = (
     "// The Java code below failed to compile because it calls helper methods\n"

@@ -42,7 +42,7 @@ def main():
     parser.add_argument(
         "input_file",
         nargs="?",
-        default=str(_REPO_ROOT / "inference" / "jsonl" / "inference_codellama_directive.jsonl"),
+        default=str(_REPO_ROOT / "inference" / "jsonl" / "inference_evol_completion_bo_v2.jsonl"),
         help="Đường dẫn file jsonl kết quả inference gốc",
     )
     parser.add_argument(

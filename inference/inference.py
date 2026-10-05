@@ -13,7 +13,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from shared.directives import CODELLAMA_PROMPT_DIRECTIVE, apply_directive, STOP_STRINGS
+from shared.directives import apply_directive, STOP_STRINGS
 from shared.repair import repair_completions
 from shared.runner import evaluate_jsonl
 
@@ -57,7 +57,7 @@ def main():
     parser.add_argument(
         "--use-directive",
         action="store_true",
-        help="Chèn CodeLlama prompt directive (inline trong thân hàm) vào đầu prompt",
+        help="Chèn prompt directive dùng chung vào đầu prompt",
     )
     parser.add_argument(
         "--with-repair",
@@ -85,7 +85,7 @@ def main():
     if args.output:
         output_file = Path(args.output)
     elif args.use_directive:
-        output_file = _REPO_ROOT / "inference" / "jsonl" / "inference_codellama_directive_inline.jsonl"
+        output_file = _REPO_ROOT / "inference" / "jsonl" / "inference_codellama_directive.jsonl"
     else:
         output_file = _REPO_ROOT / "inference" / "jsonl" / "inference_evol_completion_bo_v2.jsonl"
 
@@ -95,7 +95,7 @@ def main():
     print("HF_HOME / cache :", cache_dir)
     print("Model path      :", model_path)
     print("Output file     :", output_file)
-    print("Prompt Directive:", "CodeLlama inline" if args.use_directive else "TẮT")
+    print("Prompt Directive:", "BẬT" if args.use_directive else "TẮT")
     print("Repair Pass     :", "BẬT" if args.with_repair else "TẮT")
     print("=" * 60)
 
@@ -150,7 +150,7 @@ def main():
     for item in tqdm(dataset, desc=desc):
         prompt = item["prompt"]
         input_prompt = (
-            apply_directive(prompt, CODELLAMA_PROMPT_DIRECTIVE) if args.use_directive else prompt
+            apply_directive(prompt) if args.use_directive else prompt
         )
         raw_code = generate_fn(input_prompt)
 

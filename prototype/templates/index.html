@@ -60,6 +60,15 @@
                     </div>
 
                     <div class="card-body">
+                        <!-- 0. Model switch -->
+                        <div class="model-row">
+                            <label class="group-label" for="model-select" data-i18n="label.model">Model:</label>
+                            <select id="model-select" class="model-select" data-i18n-title="model.switch" title="Switch model">
+                                <option value="base" data-i18n="model.base">CodeLlama-7B (base)</option>
+                                <option value="finetuned" selected data-i18n="model.finetuned">CodeLlama-7B (fine-tuned)</option>
+                            </select>
+                        </div>
+
                         <!-- 1. Sample problems -->
                         <div class="section-group">
                             <label class="group-label" data-i18n="label.preset">Sample problems:</label>

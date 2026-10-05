@@ -44,3 +44,21 @@ python train/bayes_opt.py --export-best
 ```
 
 Proxy: ~8% data, 1 epoch, minimize `eval_loss`.
+
+## Qwen2.5-Coder-32B (H100 80GB)
+
+Cùng pipeline (TPE, proxy 8%, 1 epoch, minimize `eval_loss`). Base model là `Qwen/Qwen2.5-Coder-32B` (completion, không dùng bản Instruct). Data là `data/jsonl/java_completion_train.jsonl`. 1.000 mẫu validation được giữ riêng trước khi cắt 8% proxy, nên eval loss không tính trên mẫu trial đã học. QLoRA 4-bit NF4, micro-batch 2, `max_length` 2048. Effective batch vẫn thuộc {8, 16, 32}.
+
+Study riêng, không đụng DB / best params của CodeLlama.
+
+```powershell
+python train/bayes_opt.py --config train/configs/bo_qwen32b_h100.yaml
+python train/bayes_opt.py --config train/configs/bo_qwen32b_h100.yaml --n-trials 1
+python train/bayes_opt.py --config train/configs/bo_qwen32b_h100.yaml --export-best
+
+python train/main.py --bo-config train/configs/bo_qwen32b_h100.yaml
+```
+
+Best params: `train/studies/best_params_qwen32b.json`. Adapter: `models/java-qwen32b-lora/java_completion_bo`.
+
+Nếu trial bị prune vì OOM: trong yaml đặt `per_device_train_batch_size: 1` và `gradient_accumulation_steps.choices: [8, 16, 32]`. Muốn FlashAttention 2 thì đặt `attn_implementation: flash_attention_2` (cần cài `flash-attn`).

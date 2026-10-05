@@ -6,6 +6,7 @@ import re
 import subprocess
 import tempfile
 import shutil
+import threading
 from pathlib import Path
 # Thiết lập đường dẫn dự án vào sys.path trước các import nội bộ
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -71,6 +72,13 @@ device = "cpu"
 # Stable status keys: unloaded | loading | ready | ready_mock | error
 model_status_key = "unloaded"
 model_status_error = ""
+# base = CodeLlama-7B gốc; finetuned = cùng base, bật LoRA adapter
+MODEL_BASE = "base"
+MODEL_FINETUNED = "finetuned"
+MODEL_IDS = (MODEL_BASE, MODEL_FINETUNED)
+active_model_id = MODEL_FINETUNED
+lora_attached = False
+_infer_lock = threading.Lock()
 
 if MOCK_MODE:
     device = "CPU (Mock Mode)"
@@ -91,9 +99,33 @@ def _localized_status(lang: str) -> str:
         return i18n_t(lang, "status.error", error=model_status_error or "")
     return i18n_t(lang, f"status.{model_status_key}")
 
+def _model_options(lang: str) -> list:
+    finetuned_ok = MOCK_MODE or Path(LORA_PATH).exists()
+    return [
+        {
+            "id": MODEL_BASE,
+            "label": i18n_t(lang, "model.base"),
+            "available": True,
+        },
+        {
+            "id": MODEL_FINETUNED,
+            "label": i18n_t(lang, "model.finetuned"),
+            "available": finetuned_ok,
+        },
+    ]
+
+
+def _resolve_model_id(requested) -> str:
+    model_id = str(requested or active_model_id).strip()
+    if model_id not in MODEL_IDS:
+        raise ValueError(model_id)
+    return model_id
+
+
 def init_model():
-    global model, tokenizer, model_status_key, model_status_error
+    global model, tokenizer, model_status_key, model_status_error, lora_attached
     if MOCK_MODE:
+        lora_attached = Path(LORA_PATH).exists()
         print("Mock model mode initialized successfully.")
         return
         
@@ -129,10 +161,12 @@ def init_model():
         if Path(LORA_PATH).exists():
             print(f"Loading LoRA adapter from {LORA_PATH}...")
             model = PeftModel.from_pretrained(base_model, LORA_PATH)
-            print("LoRA adapter merged successfully.")
+            lora_attached = True
+            print("LoRA adapter loaded. Switch between base and fine-tuned at inference time.")
         else:
             print(f"LoRA path not found: {LORA_PATH}. Using base model.")
             model = base_model
+            lora_attached = False
             
         model.eval()
         model_status_key = "ready"
@@ -175,6 +209,16 @@ def clean_output(gen_text: str) -> str:
             
     return gen_text.rstrip()
 
+
+def _tag_mock_output(code: str, model_label: str, input_type: str) -> str:
+    """Gắn nhãn model vào thân hàm mock để lần chuyển model nhìn thấy trên editor."""
+    tag = f"        // {model_label}"
+    lines = code.splitlines()
+    if input_type == "NL" and lines:
+        lines.insert(1, tag)
+        return "\n".join(lines)
+    return tag + "\n" + code
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -187,7 +231,28 @@ def get_status():
         "status_key": model_status_key,
         "device": device,
         "base_model": BASE_MODEL if not MOCK_MODE else f"{BASE_MODEL} (Simulated)",
-        "lora_path": LORA_PATH if not MOCK_MODE else f"{LORA_PATH} (Simulated)"
+        "lora_path": LORA_PATH if not MOCK_MODE else f"{LORA_PATH} (Simulated)",
+        "active_model": active_model_id,
+        "models": _model_options(lang),
+    })
+
+
+@app.route("/api/model", methods=["POST"])
+def set_model():
+    """Chọn CodeLlama-7B gốc hoặc bản đã gắn LoRA. Không tải lại trọng số."""
+    global active_model_id
+    data = request.get_json() or {}
+    lang = resolve_lang(data)
+    requested = str(data.get("model") or "").strip()
+    if requested not in MODEL_IDS:
+        return jsonify({"error": i18n_t(lang, "error.unknown_model", model=requested)}), 400
+    if requested == MODEL_FINETUNED and not MOCK_MODE and not Path(LORA_PATH).exists():
+        return jsonify({"error": i18n_t(lang, "error.lora_missing")}), 409
+    active_model_id = requested
+    return jsonify({
+        "active_model": active_model_id,
+        "label": i18n_t(lang, f"model.{active_model_id}"),
+        "models": _model_options(lang),
     })
 
 def balance_class_brackets(code: str) -> str:
@@ -222,6 +287,10 @@ def generate():
     enable_cot = bool(data.get("enable_cot", False))
     input_args = data.get("input_args", "")
     lang = resolve_lang(data)
+    try:
+        model_id = _resolve_model_id(data.get("model"))
+    except ValueError as bad_model:
+        return jsonify({"error": i18n_t(lang, "error.unknown_model", model=str(bad_model))}), 400
     
     if not prompt:
         return jsonify({"error": i18n_t(lang, "error.empty_prompt")}), 400
@@ -264,6 +333,8 @@ def generate():
             
             # 3. Kết nối máy chủ AI
             yield json.dumps({"step": "model_start", "text": i18n_t(lang, "gen.model_start"), "type": "task"}) + "\n"
+            model_label = i18n_t(lang, f"model.{model_id}")
+            yield json.dumps({"step": "model_info", "text": i18n_t(lang, "gen.model_selected", model=model_label), "type": "normal"}) + "\n"
             
             # 4. Tiến trình suy luận sinh mã
             yield json.dumps({"step": "inference_start", "text": i18n_t(lang, "gen.inference_start"), "type": "task"}) + "\n"
@@ -433,6 +504,7 @@ def generate():
                 
                 yield json.dumps({"step": "inference_progress_5", "text": i18n_t(lang, "gen.progress_5"), "type": "normal"}) + "\n"
                 time.sleep(0.1)
+                cleaned_code = _tag_mock_output(cleaned_code, model_label, input_type)
                 gen_text = cleaned_code
                 elapsed = time.time() - start_time
                 time_taken_str = f"{elapsed:.2f}s (Simulated)"
@@ -440,6 +512,8 @@ def generate():
                 yield json.dumps({"step": "inference_progress", "text": i18n_t(lang, "gen.inference_wait"), "type": "normal"}) + "\n"
                 if model is None or tokenizer is None:
                     raise ValueError(i18n_t(lang, "error.model_not_loaded"))
+                if model_id == MODEL_FINETUNED and not lora_attached:
+                    raise ValueError(i18n_t(lang, "error.lora_missing"))
                     
                 inputs = tokenizer(final_prompt, return_tensors="pt").to(model.device)
                 input_length = inputs.input_ids.shape[1]
@@ -451,18 +525,23 @@ def generate():
                     
                 do_sample = temperature > 0
                 
-                with torch.no_grad():
-                    outputs = model.generate(
-                        **inputs,
-                        max_new_tokens=max_new_tokens,
-                        do_sample=do_sample,
-                        temperature=temperature if do_sample else None,
-                        top_p=0.95 if do_sample else None,
-                        pad_token_id=tokenizer.eos_token_id,
-                        eos_token_id=eos_ids,
-                        stop_strings=STOP_STRINGS,
-                        tokenizer=tokenizer,
-                    )
+                gen_kwargs = dict(
+                    max_new_tokens=max_new_tokens,
+                    do_sample=do_sample,
+                    temperature=temperature if do_sample else None,
+                    top_p=0.95 if do_sample else None,
+                    pad_token_id=tokenizer.eos_token_id,
+                    eos_token_id=eos_ids,
+                    stop_strings=STOP_STRINGS,
+                    tokenizer=tokenizer,
+                )
+                with _infer_lock:
+                    with torch.no_grad():
+                        if model_id == MODEL_BASE and lora_attached:
+                            with model.disable_adapter():
+                                outputs = model.generate(**inputs, **gen_kwargs)
+                        else:
+                            outputs = model.generate(**inputs, **gen_kwargs)
                     
                 gen_ids = outputs[0][input_length:]
                 gen_text = tokenizer.decode(gen_ids, skip_special_tokens=True)
@@ -548,7 +627,8 @@ def generate():
                 "raw_output": gen_text,
                 "enhanced_prompt": final_prompt,
                 "input_type": input_type,
-                "time_taken": time_taken_str
+                "time_taken": time_taken_str,
+                "model": model_id
             }) + "\n"
             
         except Exception as e:

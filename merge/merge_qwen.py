@@ -6,9 +6,9 @@ from peft import PeftModel
 
 
 # CONFIG
-MODEL_PATH = "./models/java-qwen/stage_2_v4"
-MERGE_MODEL = "./final_merged_qwen_model_v4"
-BASE_MODEL = "Qwen/CodeQwen1.5-7B"
+MODEL_PATH = "./models/java-qwen32b-lora/java_completion_bo"
+MERGE_MODEL = "./final_models/qwen32b_java_completion"
+BASE_MODEL = "Qwen/Qwen2.5-Coder-32B"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print("DEVICE use",DEVICE)
 

@@ -146,7 +146,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let currentFullCode = "";
     let checkInterval = null;
+    let selectedModel = "finetuned";
+    let switchingModel = false;
     const modelBadge = document.querySelector(".model-badge");
+    const modelSelect = document.getElementById("model-select");
+
+    function setModelSwitchUI(modelId, options) {
+        selectedModel = modelId || "finetuned";
+        if (!modelSelect) return;
+        if (modelSelect.value !== selectedModel) {
+            modelSelect.value = selectedModel;
+        }
+        if (Array.isArray(options)) {
+            Array.from(modelSelect.options).forEach((opt) => {
+                const match = options.find((item) => item.id === opt.value);
+                if (match) opt.disabled = match.available === false;
+            });
+        }
+    }
+
+    if (modelSelect) {
+        modelSelect.addEventListener("change", () => {
+            const modelId = modelSelect.value;
+            if (!modelId || modelId === selectedModel || switchingModel) return;
+            const previous = selectedModel;
+            switchingModel = true;
+            fetch("/api/model", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept-Language": currentLang(),
+                },
+                body: JSON.stringify({ model: modelId, lang: currentLang() }),
+            })
+                .then(async (res) => {
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        throw new Error(data.error || t("alert.model_switch_failed", { error: res.status }));
+                    }
+                    setModelSwitchUI(data.active_model, data.models);
+                })
+                .catch((err) => {
+                    modelSelect.value = previous;
+                    alert(t("alert.model_switch_failed", { error: err.message }));
+                })
+                .finally(() => {
+                    switchingModel = false;
+                });
+        });
+    }
 
     // Language toggle
     document.querySelectorAll(".lang-btn").forEach((btn) => {
@@ -264,6 +312,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 if (badgeText) badgeText.textContent = "";
                 if (infoBase) infoBase.textContent = data.base_model || "-";
+                if (data.active_model && !switchingModel) {
+                    setModelSwitchUI(data.active_model, data.models);
+                }
 
                 const status = data.status || "";
                 const statusKey = data.status_key || "";
@@ -374,6 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
             enable_language_tag: true,
             input_args: testInputArgs ? testInputArgs.value.trim() : "",
             lang: currentLang(),
+            model: selectedModel,
         };
 
         try {
@@ -432,16 +484,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     emptyState.classList.add("hidden");
                     codeContainer.classList.remove("hidden");
 
-<<<<<<< HEAD
                     let fullCode = finalResult.enhanced_prompt
                         ? finalResult.enhanced_prompt + finalResult.generated_code
                         : finalResult.full_code || finalResult.generated_code;
-=======
-                    // Lấy code hoàn chỉnh từ backend (không bao gồm hàm main kiểm thử trong editor)
-                    let fullCode = finalResult.enhanced_prompt
-                        ? (finalResult.enhanced_prompt + finalResult.generated_code)
-                        : (finalResult.full_code || finalResult.generated_code);
->>>>>>> ff713132c0d6d283950e4fe8603e283f7af7ec58
                     if (!finalResult.enhanced_prompt) {
                         if (!fullCode.includes("class Problem") && !fullCode.startsWith(prompt)) {
                             fullCode = prompt + fullCode;
@@ -467,13 +512,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }, 800);
         } catch (err) {
-<<<<<<< HEAD
             addLogLine(t("log.conn_error"), "task");
             addLogLine(t("log.generate_failed", { error: err.message }), "error");
-=======
-            addLogLine("> Lỗi kết nối / Hệ thống", "task");
-            addLogLine("Quá trình sinh mã thất bại: " + err.message, "error");
->>>>>>> ff713132c0d6d283950e4fe8603e283f7af7ec58
 
             setTimeout(() => {
                 loadingOverlay.classList.add("hidden");

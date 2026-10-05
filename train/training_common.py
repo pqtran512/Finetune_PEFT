@@ -80,16 +80,38 @@ def get_hf_cache_dir() -> str:
     return os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
 
 
-def resolve_train_hyperparams(config_arg: Path | None = None, default_path: Path | None = None) -> dict[str, Any]:
-    """Priority: --config path > default_path > studies/best_params.json > defaults."""
+def resolve_train_hyperparams(
+    config_arg: Path | None = None,
+    default_path: Path | None = None,
+    *,
+    allow_repo_default: bool = True,
+) -> dict[str, Any]:
+    """Priority: --config path > default_path > studies/best_params.json > defaults.
+
+    allow_repo_default=False skips the CodeLlama best_params.json fallback so a
+    model-specific BO config cannot silently train with another model's params.
+    """
     if config_arg is not None:
         return load_hyperparams_from_json(config_arg)
     if default_path is not None and default_path.exists():
         return load_hyperparams_from_json(default_path)
-    default_best = MAIN_DIR / "studies" / "best_params.json"
-    if default_best.exists():
-        return load_hyperparams_from_json(default_best)
+    if allow_repo_default:
+        default_best = MAIN_DIR / "studies" / "best_params.json"
+        if default_best.exists():
+            return load_hyperparams_from_json(default_best)
     return merge_hyperparams()
+
+
+def training_runtime_from_cfg(cfg: dict[str, Any]) -> dict[str, Any]:
+    """Hardware knobs. Missing keys keep the CodeLlama / RTX 3060 recipe."""
+    return {
+        "per_device_train_batch_size": int(cfg.get("per_device_train_batch_size", 1)),
+        "per_device_eval_batch_size": int(cfg.get("per_device_eval_batch_size", 1)),
+        "dataloader_num_workers": int(cfg.get("dataloader_num_workers", 0)),
+        "neftune_noise_alpha": float(cfg.get("neftune_noise_alpha", 5)),
+        "trust_remote_code": bool(cfg.get("trust_remote_code", False)),
+        "attn_implementation": cfg.get("attn_implementation") or None,
+    }
 
 
 def resolve_data_path(cfg: dict[str, Any]) -> Path:
@@ -131,8 +153,12 @@ def cleanup_cuda(*objects: Any) -> None:
         pass
 
 
-def build_tokenizer(model_id: str, cache_dir: str):
-    tokenizer = AutoTokenizer.from_pretrained(model_id, cache_dir=cache_dir)
+def build_tokenizer(model_id: str, cache_dir: str, *, trust_remote_code: bool = False):
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_id,
+        cache_dir=cache_dir,
+        trust_remote_code=trust_remote_code,
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
@@ -202,6 +228,8 @@ def build_qlora_model(
     lora_r: int,
     lora_alpha: int,
     lora_dropout: float,
+    trust_remote_code: bool = False,
+    attn_implementation: str | None = None,
 ):
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -209,11 +237,17 @@ def build_qlora_model(
         bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.bfloat16,
     )
+    load_kwargs: dict[str, Any] = {}
+    if trust_remote_code:
+        load_kwargs["trust_remote_code"] = True
+    if attn_implementation:
+        load_kwargs["attn_implementation"] = attn_implementation
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         quantization_config=bnb_config,
         device_map="auto",
         cache_dir=cache_dir,
+        **load_kwargs,
     )
     model.gradient_checkpointing_enable()
     model = prepare_model_for_kbit_training(model)
@@ -238,17 +272,22 @@ def build_training_args(
     proxy: bool,
     report_to: str = "none",
     run_name: str = "codellama-qlora",
+    per_device_train_batch_size: int = 1,
+    per_device_eval_batch_size: int = 1,
+    dataloader_num_workers: int = 0,
+    neftune_noise_alpha: float = 5,
 ) -> TrainingArguments:
     grad_accum = int(hyperparams["gradient_accumulation_steps"])
-    effective_batch = max(1, 1 * grad_accum)
+    micro_batch = max(1, int(per_device_train_batch_size))
+    effective_batch = max(1, micro_batch * grad_accum)
     steps_per_epoch = max(1, train_len // effective_batch)
     eval_steps = max(50, int(0.1 * steps_per_epoch))
 
     kwargs: dict[str, Any] = dict(
         output_dir=output_dir,
         num_train_epochs=num_train_epochs,
-        per_device_train_batch_size=1,
-        per_device_eval_batch_size=1,
+        per_device_train_batch_size=micro_batch,
+        per_device_eval_batch_size=max(1, int(per_device_eval_batch_size)),
         gradient_accumulation_steps=grad_accum,
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
@@ -259,9 +298,9 @@ def build_training_args(
         optim="paged_adamw_8bit",
         bf16=True,
         tf32=True,
-        neftune_noise_alpha=5,
+        neftune_noise_alpha=float(neftune_noise_alpha),
         logging_steps=10,
-        dataloader_num_workers=0,
+        dataloader_num_workers=int(dataloader_num_workers),
         report_to=report_to,
         run_name=run_name,
     )

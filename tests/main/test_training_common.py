@@ -15,6 +15,7 @@ from training_common import (  # noqa: E402
     resolve_data_path,
     resolve_train_hyperparams,
     get_hf_cache_dir,
+    training_runtime_from_cfg,
 )
 
 
@@ -91,3 +92,47 @@ def test_resolve_train_hyperparams_from_explicit(tmp_path: Path):
 def test_get_hf_cache_dir_uses_hf_home(monkeypatch):
     monkeypatch.setenv("HF_HOME", "D:/cache/huggingface")
     assert get_hf_cache_dir() == "D:/cache/huggingface"
+
+
+def test_runtime_defaults_match_codellama_recipe():
+    runtime = training_runtime_from_cfg({})
+    assert runtime["per_device_train_batch_size"] == 1
+    assert runtime["neftune_noise_alpha"] == 5
+    assert runtime["attn_implementation"] is None
+
+
+def test_holdout_validation_is_disjoint_from_train_pool():
+    from datasets import Dataset
+
+    from train_trial import holdout_validation
+
+    raw = Dataset.from_dict({"row_id": list(range(100))})
+    pool, val = holdout_validation(raw, val_size=10, seed=42)
+    assert len(val) == 10
+    assert len(pool) == 90
+    assert set(val["row_id"]).isdisjoint(set(pool["row_id"]))
+    proxy_n = max(1, int(len(pool) * 0.08))
+    proxy = pool.shuffle(seed=42).select(range(proxy_n))
+    assert set(proxy["row_id"]).isdisjoint(set(val["row_id"]))
+
+
+def test_qwen32b_h100_config_keeps_effective_batch_range():
+    cfg = load_yaml_config(ROOT / "train" / "configs" / "bo_qwen32b_h100.yaml")
+    assert cfg["model_id"] == "Qwen/Qwen2.5-Coder-32B"
+    assert cfg["data_path"].endswith("java_completion_train.jsonl")
+    assert cfg["val_size"] == 1000
+    assert cfg["max_length"] == 2048
+    runtime = training_runtime_from_cfg(cfg)
+    assert runtime["per_device_train_batch_size"] == 2
+    assert runtime["attn_implementation"] == "sdpa"
+    micro = runtime["per_device_train_batch_size"]
+    effective = {micro * int(c) for c in cfg["search_space"]["gradient_accumulation_steps"]["choices"]}
+    assert effective == {8, 16, 32}
+    assert cfg["study_db"] != "train/studies/codellama_bo_v2.db"
+
+
+def test_resolve_train_hyperparams_skips_other_model_best(tmp_path: Path):
+    missing = tmp_path / "missing.json"
+    hp = resolve_train_hyperparams(None, missing, allow_repo_default=False)
+    assert hp["lora_r"] == DEFAULT_HYPERPARAMS["lora_r"]
+    assert hp["learning_rate"] == DEFAULT_HYPERPARAMS["learning_rate"]

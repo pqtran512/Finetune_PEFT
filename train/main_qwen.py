@@ -30,12 +30,12 @@ def main():
     MAX_LENGTH = 1536
     CACHE_DIR = "D:/cache/hugging_face"
 
-    # wandb.init(project="my-hf-project", name="codeqwen-stage2-v4")
-    wandb.init(
-        project="my-hf-project",
-        id="8id7xkjy",     # run_id cũ
-        resume="allow"
-    )
+    wandb.init(project="my-hf-project", name="codeqwen-bayes")
+    # wandb.init(
+    #     project="my-hf-project",
+    #     id="8id7xkjy",     # run_id cũ
+    #     resume="allow"
+    # )
 
     # 2. Load dataset (function-completion: prefix/target)
     print("--- Loading completion dataset ---")

@@ -1,0 +1,60 @@
+# QLoRA Bayesian optimization for Qwen2.5-Coder-32B on 1x H100 80GB.
+# Same search as CodeLlama (train/configs/bo_defaults.yaml), with the micro-batch
+# raised so the effective batch stays in {8, 16, 32}:
+#   CodeLlama: batch 1 × accum {8, 16, 32}
+#   This run:  batch 2 × accum {4, 8, 16}
+# QLoRA 4-bit NF4 + bf16 compute. Weights are ~18GB; activations stay inside 80GB
+# at max_length 2048 with gradient checkpointing. If a trial OOMs, it is pruned;
+# drop per_device_train_batch_size to 1 and set accum choices back to [8, 16, 32].
+model_id: Qwen/Qwen2.5-Coder-32B
+data_path: data/jsonl/java_completion_train.jsonl
+# BO validates on this same file. train_trial holds val_size rows out first,
+# then takes proxy_train_fraction from the remainder only.
+val_size: 1000
+output_dir: models/java-qwen32b-lora/java_completion_bo
+max_length: 2048
+per_device_train_batch_size: 2
+per_device_eval_batch_size: 2
+dataloader_num_workers: 4
+map_num_proc: 4
+# sdpa is built into PyTorch and is fast on Hopper. Set flash_attention_2 if
+# flash-attn is installed.
+attn_implementation: sdpa
+trust_remote_code: false
+proxy_train_fraction: 0.08
+proxy_epochs: 1
+num_train_epochs: 3
+n_trials: 40
+study_name: qwen32b_qlora_bo
+study_db: train/studies/qwen32b_bo.db
+best_params_path: train/studies/best_params_qwen32b.json
+trial_output_root: models/java-qwen32b-lora/bo_trials
+eval_test_size: 0.02
+eval_seed: 42
+neftune_noise_alpha: 5
+wandb_project: qwen32b-java
+wandb_run_name: qwen32b-qlora-h100
+run_name: qwen32b-completion-qlora-h100
+search_space:
+  learning_rate:
+    type: loguniform
+    low: 1.0e-5
+    high: 3.0e-4
+  weight_decay:
+    type: uniform
+    low: 0.0
+    high: 0.1
+  warmup_ratio:
+    type: uniform
+    low: 0.01
+    high: 0.1
+  lora_dropout:
+    type: uniform
+    low: 0.0
+    high: 0.1
+  lora_r:
+    type: categorical
+    choices: [8, 16, 32, 64]
+  gradient_accumulation_steps:
+    type: categorical
+    choices: [4, 8, 16]

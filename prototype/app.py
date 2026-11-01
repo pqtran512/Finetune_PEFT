@@ -21,7 +21,7 @@ args, unknown = parser.parse_known_args()
 MOCK_MODE = args.mock
 
 import json
-from flask import Flask, request, jsonify, render_template, Response
+from flask import Flask, request, jsonify, render_template, Response, send_from_directory
 
 try:
     from prototype.prompt_enhancer import enhance_prompt, STANDARD_IMPORTS_HEADER
@@ -29,6 +29,9 @@ try:
 except ImportError:
     from prompt_enhancer import enhance_prompt, STANDARD_IMPORTS_HEADER
     from i18n import t as i18n_t, resolve_lang
+
+_FRONTEND_DIST = _REPO_ROOT / "frontend" / "dist"
+_SPA_INDEX = _FRONTEND_DIST / "index.html"
 
 # Hàm load file .env thủ công nếu có
 def _load_env(path: Path) -> None:
@@ -47,6 +50,22 @@ _load_env(_REPO_ROOT / ".env")
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+
+@app.after_request
+def _cors_headers(response):
+    """Cho phép Vite dev server (5173) gọi API Flask trong lúc phát triển UI."""
+    origin = request.headers.get("Origin", "")
+    if origin.startswith("http://127.0.0.1:5173") or origin.startswith("http://localhost:5173"):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Accept, Accept-Language"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
+
+@app.route("/api/<path:_any>", methods=["OPTIONS"])
+def _api_options(_any):
+    return ("", 204)
 
 @app.after_request
 def add_header(response):
@@ -221,7 +240,24 @@ def _tag_mock_output(code: str, model_label: str, input_type: str) -> str:
 
 @app.route("/")
 def index():
+    """Ưu tiên SPA React (frontend/dist); fallback UI Flask cũ nếu chưa build."""
+    if _SPA_INDEX.is_file():
+        return send_from_directory(_FRONTEND_DIST, "index.html")
     return render_template("index.html")
+
+
+@app.route("/legacy")
+def legacy_index():
+    """Giữ bản HTML/JS cũ để đối chiếu."""
+    return render_template("index.html")
+
+
+@app.route("/assets/<path:filename>")
+def spa_assets(filename):
+    assets_dir = _FRONTEND_DIST / "assets"
+    if assets_dir.is_dir():
+        return send_from_directory(assets_dir, filename)
+    return jsonify({"error": "SPA assets not found. Run: npm run build --prefix frontend"}), 404
 
 @app.route("/api/status", methods=["GET"])
 def get_status():

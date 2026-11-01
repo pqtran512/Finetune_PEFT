@@ -22,6 +22,14 @@ if %errorlevel% neq 0 (
     pip install flask
 )
 
+:: SPA React (neu da build); neu chua co dist se fallback UI Flask cu
+if not exist "frontend\dist\index.html" (
+    echo [WARN] Chua build frontend\dist — dung UI Flask cu.
+    echo        Chay build_frontend.bat de dung console React moi.
+) else (
+    echo [INFO] Phuc vu SPA React tu frontend\dist
+)
+
 :: Mo trinh duyet sau 2 giay de dam bao Web Server da san sang lang nghe
 echo Dang khoi dong Web Server tren http://127.0.0.1:5000...
 echo Trinh duyet se tu dong mo trong 2 giay...

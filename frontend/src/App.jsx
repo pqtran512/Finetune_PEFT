@@ -387,7 +387,9 @@ function App() {
         })
         if (suggestRes.ok) {
           const suggest = await suggestRes.json()
-          if (suggest.suggested_input && !inputArgs.trim()) {
+          // Always refresh args to match the newly generated signature
+          // (old preset defaults like "7" for isPrime must not stick around).
+          if (suggest.suggested_input) {
             setInputArgs(suggest.suggested_input.replace(/^\(|\)$/g, ''))
           }
           if (Array.isArray(suggest.params)) setParamHints(suggest.params)

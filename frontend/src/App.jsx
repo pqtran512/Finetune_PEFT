@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { java } from '@codemirror/lang-java'
-import { vscodeLight } from '@uiw/codemirror-theme-vscode'
+import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
@@ -16,10 +16,12 @@ import {
   Cpu,
   Download,
   FileJson,
+  Moon,
   Network,
   Play,
   RefreshCw,
   ScanLine,
+  Sun,
   Terminal,
   X,
   XCircle,
@@ -30,6 +32,20 @@ import './App.css'
 const javaExtensions = [java()]
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+const THEME_STORAGE_KEY = 'ajac-theme'
+
+function getInitialTheme() {
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY)
+    if (stored === 'light' || stored === 'dark') return stored
+  } catch {
+    /* ignore */
+  }
+  if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark'
+  }
+  return 'light'
+}
 
 const tabs = [
   { id: 'monitor', label: 'Pipeline Monitor', icon: Activity },
@@ -115,8 +131,25 @@ function App() {
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewFilename, setPreviewFilename] = useState('Problem.java')
   const [previewCode, setPreviewCode] = useState('')
+  const [theme, setTheme] = useState(() => {
+    const initial = getInitialTheme()
+    document.documentElement.setAttribute('data-theme', initial)
+    return initial
+  })
   const consoleRef = useRef(null)
   const abortControllerRef = useRef(null)
+  const editorTheme = theme === 'dark' ? vscodeDark : vscodeLight
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme)
+    } catch {
+      /* ignore */
+    }
+  }, [theme])
+
+  const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
 
   const preset = useMemo(
     () => presets.find((item) => item.id === presetId) || presets[0],
@@ -496,6 +529,15 @@ function App() {
           </div>
         </div>
         <div className="topbar-status">
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          >
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
           <span className={`status-chip ${statusChipClass}`}>
             <span className="pulse" />
             {(serverStatus?.status || 'Connecting...').slice(0, 42)}
@@ -517,7 +559,7 @@ function App() {
             <Cpu size={18} className="muted" />
           </div>
 
-          <div className="control-grid">
+          <div className="control-grid control-grid--secondary">
             <label>
               MODEL
               <select value={modelId} onChange={changeModel} disabled={switchingModel || !modelReady}>
@@ -538,15 +580,16 @@ function App() {
             </label>
           </div>
 
-          <div className="intel-card">
+          <div className="intel-card intel-card--muted">
             <div className="card-kicker"><AlertTriangle size={14} /> PIPELINE BRIEF</div>
             <div className="intel-title">{preset.group}</div>
             <p>{preset.description}</p>
           </div>
 
-          <label className="query-label">
-            PROBLEM / PREFIX
+          <label className="query-label prompt-stage">
+            <span className="prompt-stage-label">PROBLEM / PREFIX</span>
             <textarea
+              className="prompt-textarea"
               value={prompt}
               onChange={(event) => {
                 setPrompt(event.target.value)
@@ -686,6 +729,7 @@ function App() {
               onDownload={openPreview}
               downloadLabel={previewLoading ? 'PREPARING...' : 'DOWNLOAD'}
               downloadDisabled={previewLoading || !fullCode.trim()}
+              editorTheme={editorTheme}
             />
           )}
           {activeTab === 'xray' && <ExecutionTrace events={xrayEvents} loading={loading} />}
@@ -702,6 +746,7 @@ function App() {
           onClose={closePreview}
           onCopy={copyPreviewCode}
           onDownload={downloadPreviewFile}
+          editorTheme={editorTheme}
         />
       )}
     </main>
@@ -830,7 +875,7 @@ function Monitor({ result }) {
   )
 }
 
-function CodePanel({ code, onChange, onCopy, onDownload, downloadLabel = 'DOWNLOAD', downloadDisabled = false }) {
+function CodePanel({ code, onChange, onCopy, onDownload, downloadLabel = 'DOWNLOAD', downloadDisabled = false, editorTheme }) {
   const hasCode = Boolean(code?.trim())
   return (
     <div className="code-panel">
@@ -852,7 +897,7 @@ function CodePanel({ code, onChange, onCopy, onDownload, downloadLabel = 'DOWNLO
         value={code}
         height="62vh"
         minHeight="360px"
-        theme={vscodeLight}
+        theme={editorTheme}
         extensions={javaExtensions}
         onChange={onChange}
         placeholder="// Enter or paste Java code here — Generate will overwrite when a result arrives"
@@ -868,7 +913,7 @@ function CodePanel({ code, onChange, onCopy, onDownload, downloadLabel = 'DOWNLO
   )
 }
 
-function PreviewModal({ filename, code, onChange, onClose, onCopy, onDownload }) {
+function PreviewModal({ filename, code, onChange, onClose, onCopy, onDownload, editorTheme }) {
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
@@ -893,7 +938,7 @@ function PreviewModal({ filename, code, onChange, onClose, onCopy, onDownload })
           value={code}
           height="52vh"
           minHeight="360px"
-          theme={vscodeLight}
+          theme={editorTheme}
           extensions={javaExtensions}
           onChange={onChange}
           basicSetup={{

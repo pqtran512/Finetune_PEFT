@@ -793,9 +793,10 @@ def smart_preprocess_input(input_str: str, params: list) -> str:
     """Chuyển đổi input đơn giản của user sang Java hợp lệ.
     
     Ví dụ:
-    - User nhập: [1, 2, 3]   với param type List<Integer>  -> List.of(1, 2, 3)
-    - User nhập: ["a", "b"]  với param type List<String>   -> List.of("a", "b")
+    - User nhập: [1, 2, 3]   với param type List<Integer>  -> new ArrayList<>(List.of(1, 2, 3))
+    - User nhập: ["a", "b"]  với param type List<String>   -> new ArrayList<>(List.of("a", "b"))
     - User nhập: {1, 2, 3}   với param type int[]           -> new int[]{1, 2, 3}
+    - User nhập: [[1,3],[2,6]] + List<int[]> -> new ArrayList<>(List.of(new int[]{1,3}, ...))
     - User nhập: "abc"       với param type String           -> "abc" (giữ nguyên)
     """
     args_str = input_str.strip()
@@ -865,6 +866,21 @@ def _split_args(s: str) -> list:
         result.append(current)
     return result
 
+def _list_inner_type(param_type: str):
+    """Lấy T từ List|ArrayList|LinkedList<T>; None nếu không phải list generic."""
+    m = re.match(r'(?:List|ArrayList|LinkedList)<(.+)>$', param_type.strip())
+    return m.group(1).strip() if m else None
+
+
+def _wrap_list_of(param_type: str, joined_elems: str) -> str:
+    """Bọc các phần tử đã convert thành list Java mutable (để sort in-place OK)."""
+    if "LinkedList" in param_type:
+        return f"new LinkedList<>(List.of({joined_elems}))"
+    # List.of là immutable → Collections.sort sẽ ném UnsupportedOperationException.
+    # Harness luôn dùng ArrayList cho List/ArrayList để khớp thuật toán mutate input.
+    return f"new ArrayList<>(List.of({joined_elems}))"
+
+
 def _convert_single_arg(raw: str, param_type: str) -> str:
     """Chuyển đổi một argument đơn lẻ sang dạng Java hợp lệ.
     
@@ -873,9 +889,12 @@ def _convert_single_arg(raw: str, param_type: str) -> str:
     - ["a", "b"] + List<String> -> List.of("a", "b")
     - [1, 2, 3] + ArrayList<Integer> -> new ArrayList<>(List.of(1, 2, 3))
     - {1, 2, 3} + int[] -> new int[]{1, 2, 3}
+    - [[1,3],[2,6]] + List<int[]> -> List.of(new int[]{1, 3}, new int[]{2, 6})
+    - [[1,3],[2,6]] + int[][] -> new int[][]{new int[]{1, 3}, new int[]{2, 6}}
     - Nếu đã là Java hợp lệ (List.of, new ...) -> giữ nguyên
     """
     raw = raw.strip()
+    param_type = param_type.strip()
     
     # Nếu đã là cú pháp Java đầy đủ, giữ nguyên
     if raw.startswith('List.of') or raw.startswith('new ') or raw.startswith('Arrays.asList'):
@@ -883,31 +902,28 @@ def _convert_single_arg(raw: str, param_type: str) -> str:
     if raw.startswith('Map.of'):
         return raw
     
-    # Kiểm tra nếu là mảng dạng [item1, item2, ...]
-    is_list_type = bool(re.match(r'(?:List|ArrayList|LinkedList)<', param_type))
+    list_inner = _list_inner_type(param_type)
     is_array_type = param_type.endswith('[]')
     
-    if raw.startswith('[') and raw.endswith(']'):
+    # Dạng [item1, item2, ...] hoặc {item1, item2, ...}
+    if (raw.startswith('[') and raw.endswith(']')) or (raw.startswith('{') and raw.endswith('}')):
         inner = raw[1:-1].strip()
-        if is_list_type:
-            if 'ArrayList' in param_type:
-                return f"new ArrayList<>(List.of({inner}))"
-            return f"List.of({inner})"
-        elif is_array_type:
-            base = param_type[:-2].strip()
-            return f"new {base}[]{{{inner}}}"
-        else:
-            # Default: coi như List.of
-            return f"List.of({inner})"
-    
-    # Kiểm tra nếu là mảng dạng {item1, item2, ...}
-    if raw.startswith('{') and raw.endswith('}'):
-        inner = raw[1:-1].strip()
+        elements = _split_args(inner) if inner else []
+        
+        if list_inner is not None:
+            converted = [_convert_single_arg(e.strip(), list_inner) for e in elements]
+            return _wrap_list_of(param_type, ", ".join(converted))
+        
         if is_array_type:
             base = param_type[:-2].strip()
+            # Nested: [[1,3],[2,6]] + int[][] → new int[][]{new int[]{1, 3}, ...}
+            if elements and elements[0].strip().startswith(('[', '{')):
+                converted = [_convert_single_arg(e.strip(), base) for e in elements]
+                return f"new {param_type}{{{', '.join(converted)}}}"
             return f"new {base}[]{{{inner}}}"
-        elif is_list_type:
-            return f"List.of({inner})"
+        
+        # Default không rõ kiểu: giữ hành vi cũ
+        return f"List.of({inner})"
     
     return raw
 
@@ -1232,7 +1248,38 @@ def run_code():
         wrapped_code += "}\n"
         code_balanced = wrapped_code
         
-    # Tạo mã TestRunner riêng biệt để thực thi
+    # Tạo mã TestRunner riêng biệt để thực thi.
+    # formatValue deep-print mảng / List<int[]> (tránh [I@hash khi System.out.print).
+    _format_helpers = """
+    static String formatValue(Object value) {
+        if (value == null) return "null";
+        if (value instanceof int[]) return Arrays.toString((int[]) value);
+        if (value instanceof long[]) return Arrays.toString((long[]) value);
+        if (value instanceof double[]) return Arrays.toString((double[]) value);
+        if (value instanceof boolean[]) return Arrays.toString((boolean[]) value);
+        if (value instanceof Object[]) {
+            Object[] arr = (Object[]) value;
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < arr.length; i++) {
+                if (i > 0) sb.append(", ");
+                sb.append(formatValue(arr[i]));
+            }
+            return sb.append("]").toString();
+        }
+        if (value instanceof Collection) {
+            Collection<?> col = (Collection<?>) value;
+            StringBuilder sb = new StringBuilder("[");
+            boolean first = true;
+            for (Object item : col) {
+                if (!first) sb.append(", ");
+                first = false;
+                sb.append(formatValue(item));
+            }
+            return sb.append("]").toString();
+        }
+        return String.valueOf(value);
+    }
+"""
     if ret_type == "void":
         runner_code = f"""import java.util.*;
 import java.io.*;
@@ -1240,6 +1287,7 @@ import java.math.*;
 import org.javatuples.*;
 
 public class TestRunner {{
+{_format_helpers}
     public static void main(String[] args) {{
         try {{
             {class_name}.{method_name}{args_str};
@@ -1258,9 +1306,10 @@ import java.math.*;
 import org.javatuples.*;
 
 public class TestRunner {{
+{_format_helpers}
     public static void main(String[] args) {{
         try {{
-            System.out.print({class_name}.{method_name}{args_str});
+            System.out.print(formatValue({class_name}.{method_name}{args_str}));
         }} catch (Throwable t) {{
             t.printStackTrace(System.err);
             System.exit(1);

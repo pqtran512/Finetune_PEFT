@@ -360,7 +360,7 @@ def generate():
             rules_applied = ["RULE-JAVA-DECL-NO-DOC", "RULE-CLEAR-SYNTAX-OUTPUT", "RULE-REPEAT-INSTR-AT-END"]
             if enable_lang:
                 rules_applied.append("RULE-TRAINED-KW-JAVA")
-            if enable_cot or input_type == "NL":
+            if enable_cot:
                 rules_applied.append("RULE-ZEROSHOT-CHAIN-OF-THOUGHT")
             if input_type in ("NL", "METHOD_ONLY"):
                 rules_applied.append("RULE-INCL-INSTR")

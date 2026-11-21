@@ -1,0 +1,13 @@
+file: inference_evol_completion_bo_v2.quality
+tasks: 158
+passed: 64
+median trên các bài PASSED:
+  median_cyclomatic: 3
+  median_cognitive: 3
+  cyclomatic_gt_10: 1/64 (1.6%)
+  median_checkstyle_warnings: 0
+  tasks_with_checkstyle_warning: 7/64
+  median_spotbugs_warnings: 0
+  tasks_with_spotbugs_warning: 2/64
+  median_runtime_ns: 8150
+  runtime_known: 64/64

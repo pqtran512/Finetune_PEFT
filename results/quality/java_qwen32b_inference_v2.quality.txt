@@ -1,0 +1,13 @@
+file: java_qwen32b_inference_v2
+tasks: 158
+passed: 114
+median trên các bài PASSED:
+  median_cyclomatic: 3
+  median_cognitive: 3.5
+  cyclomatic_gt_10: 1/88 (1.1%)
+  median_checkstyle_warnings: 0
+  tasks_with_checkstyle_warning: 26/114
+  median_spotbugs_warnings: 0
+  tasks_with_spotbugs_warning: 5/114
+  median_runtime_ns: 7500
+  runtime_known: 114/114

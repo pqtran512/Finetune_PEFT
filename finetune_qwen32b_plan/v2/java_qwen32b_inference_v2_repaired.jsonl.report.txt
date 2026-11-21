@@ -1,0 +1,113 @@
+pass@1: 80.38% (127/158)
+
+Failures (task_id | status | stderr[:300]):
+HumanEval_10_make_palindrome | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:53)
+
+HumanEval_19_sort_numbers | FAILED | Exception in thread "main" java.lang.IllegalArgumentException: Invalid number word
+	at Problem.getNumberValue(Problem.java:80)
+	at Problem.sortNumbers(Problem.java:19)
+	at Problem.main(Problem.java:84)
+
+HumanEval_54_same_chars | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:34)
+
+HumanEval_58_common | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_65_circular_shift | COMPILE_ERROR | Problem.java:24: error: incompatible types: possible lossy conversion from long to int
+            return digits.substring(numDigits - shift) + digits.substring(0, numDigits - shift);
+                                              ^
+Problem.java:24: error: incompatible types: possible lossy conversio
+HumanEval_76_is_simple_power | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:46)
+
+HumanEval_77_iscube | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:33)
+
+HumanEval_79_decimal_to_binary | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_84_solve | COMPILE_ERROR | Problem.java:19: error: unmappable character (0xE2) for encoding US-ASCII
+    // Constraints: 0 ??? N ??? 10000.
+                      ^
+Problem.java:19: error: unmappable character (0x89) for encoding US-ASCII
+    // Constraints: 0 ??? N ??? 10000.
+                       ^
+Problem.java:19: error: u
+HumanEval_87_get_row | COMPILE_ERROR | Problem.java:35: error: incompatible types: cannot infer type-variable(s) T,U
+        result.sort(Comparator.comparing(Pair::getValue0).thenComparing(Pair::getValue1, Comparator.reverseOrder()));
+                                        ^
+    (argument mismatch; invalid method reference
+      method 
+HumanEval_91_is_bored | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_92_any_int | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:38)
+
+HumanEval_95_check_dict_case | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:46)
+
+HumanEval_108_count_nums | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:48)
+
+HumanEval_109_move_one_ball | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:51)
+
+HumanEval_112_reverse_delete | FAILED | Exception in thread "main" java.util.regex.PatternSyntaxException: Unclosed character class near index 1
+[]
+ ^
+	at java.base/java.util.regex.Pattern.error(Pattern.java:2028)
+	at java.base/java.util.regex.Pattern.clazz(Pattern.java:2696)
+	at java.base/java.util.regex.Pattern.sequence(Pattern.java:213
+HumanEval_116_sort_array | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:33)
+
+HumanEval_120_maximum | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:30)
+
+HumanEval_127_intersection | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:63)
+
+HumanEval_129_minPath | COMPILE_ERROR | Problem.java:35: error: missing return statement
+    }
+    ^
+1 error
+
+HumanEval_130_tri | FAILED | Exception in thread "main" java.lang.IndexOutOfBoundsException: Index 6 out of bounds for length 5
+	at java.base/jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:64)
+	at java.base/jdk.internal.util.Preconditions.outOfBoundsCheckIndex(Preconditions.java:70)
+	at java.base/jdk.internal.ut
+HumanEval_132_is_nested | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:55)
+
+HumanEval_134_check_if_last_char_is_a_letter | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:31)
+
+HumanEval_136_largest_smallest_integers | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:40)
+
+HumanEval_140_fix_spaces | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:56)
+
+HumanEval_145_order_by_points | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:33)
+
+HumanEval_147_get_max_triples | COMPILE_ERROR | Problem.java:10: error: unmappable character (0xE2) for encoding US-ASCII
+    // For each i (1 ??? i ??? n), the value of a[i] = i * i - i + 1.
+                     ^
+Problem.java:10: error: unmappable character (0x89) for encoding US-ASCII
+    // For each i (1 ??? i ??? n), the value of a[i] = i * 
+HumanEval_154_cycpattern_check | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:34)
+
+HumanEval_155_even_odd_count | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:41)
+
+HumanEval_160_do_algebra | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:53)
+
+HumanEval_163_generate_integers | FAILED | Exception in thread "main" java.lang.AssertionError
+	at Problem.main(Problem.java:33)
+

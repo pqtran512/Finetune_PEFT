@@ -1,0 +1,13 @@
+file: inference_codellama_base
+tasks: 158
+passed: 55
+median trên các bài PASSED:
+  median_cyclomatic: 3
+  median_cognitive: 3
+  cyclomatic_gt_10: 1/46 (2.2%)
+  median_checkstyle_warnings: 0
+  tasks_with_checkstyle_warning: 4/55
+  median_spotbugs_warnings: 0
+  tasks_with_spotbugs_warning: 5/55
+  median_runtime_ns: 8300
+  runtime_known: 55/55

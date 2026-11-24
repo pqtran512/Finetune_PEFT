@@ -1,0 +1,13 @@
+file: inference_codellama_directive_repaired
+tasks: 158
+passed: 54
+median trên các bài PASSED:
+  median_cyclomatic: 3
+  median_cognitive: 4
+  cyclomatic_gt_10: 1/45 (2.2%)
+  median_checkstyle_warnings: 0
+  tasks_with_checkstyle_warning: 5/54
+  median_spotbugs_warnings: 0
+  tasks_with_spotbugs_warning: 1/54
+  median_runtime_ns: 7150
+  runtime_known: 54/54
